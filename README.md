@@ -1,4 +1,3 @@
 # ryanDB
-Distributed key-value store
 
-https://raft.github.io/raft.pdf
+Distributed key-value store implementing the [Raft consensus algorithm](https://raft.github.io/raft.pdf).
