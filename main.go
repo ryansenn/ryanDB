@@ -3,14 +3,23 @@ package main
 import (
 	"log"
 	"net/http"
+	"ryanDB/storage"
 )
 
+var engine = storage.NewEngine()
+
 func get(w http.ResponseWriter, r *http.Request) {
-	log.Println("get key=", r.URL.Query().Get("key"))
+	key := r.URL.Query().Get("key")
+	log.Println("get key=", key)
+	value := engine.Get(key)
+	w.Write([]byte(value))
 }
 
 func put(w http.ResponseWriter, r *http.Request) {
-	log.Println("put key=", r.URL.Query().Get("key"), "value=", r.URL.Query().Get("value"))
+	key := r.URL.Query().Get("key")
+	value := r.URL.Query().Get("value")
+	log.Println("put key=", key, "value=", value)
+	engine.Put(key, value)
 }
 
 func main() {
