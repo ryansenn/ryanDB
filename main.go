@@ -6,9 +6,11 @@ import (
 	"log"
 	"net/http"
 	"ryanDB/storage"
+	"strings"
 )
 
 var engine = storage.NewEngine()
+var peers map[string]string
 
 func get(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Query().Get("key")
@@ -24,6 +26,17 @@ func put(w http.ResponseWriter, r *http.Request) {
 	engine.Put(key, value)
 }
 
+func parsePeers(peersStr string) map[string]string {
+	res := map[string]string{}
+
+	for _, pair := range strings.Split(peersStr, ",") {
+		kv := strings.Split(pair, "=")
+		res[kv[0]] = kv[1]
+	}
+
+	return res
+}
+
 func main() {
 	id := flag.String("id", "", "Unique node ID")
 	port := flag.String("port", "8000", "Port to listen on")
@@ -35,6 +48,8 @@ func main() {
 		fmt.Println("Usage: go run main.go --id=node1 --port=8001 --peers=node1=localhost:8001,node2=localhost:8002,node3=localhost:8003")
 		return
 	}
+
+	peers = parsePeers(*peersStr)
 
 	http.HandleFunc("/get", get)
 	http.HandleFunc("/put", put)
