@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"ryanDB/storage"
@@ -23,9 +25,20 @@ func put(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	id := flag.String("id", "", "Unique node ID")
+	port := flag.String("port", "8000", "Port to listen on")
+	peersStr := flag.String("peers", "", "Comma-separated list of id=addr pairs (e.g., node1=localhost:8001,node2=localhost:8002,node3=localhost:8003)")
+
+	flag.Parse()
+
+	if *id == "" || *peersStr == "" {
+		fmt.Println("Usage: go run main.go --id=node1 --port=8001 --peers=node1=localhost:8001,node2=localhost:8002,node3=localhost:8003")
+		return
+	}
+
 	http.HandleFunc("/get", get)
 	http.HandleFunc("/put", put)
 
-	log.Println("Server on :8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Printf("Server ID: %s | Listening on: %s | Peers: %s", *id, *port, *peersStr)
+	log.Fatal(http.ListenAndServe(":"+*port, nil))
 }
