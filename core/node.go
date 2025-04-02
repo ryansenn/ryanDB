@@ -1,6 +1,8 @@
 package core
 
 import (
+	"log"
+
 	"github.com/ryansenn/ryanDB/storage"
 )
 
@@ -31,5 +33,7 @@ func (n *Node) Get(key string) string {
 }
 
 func (n *Node) Put(key string, value string) {
-	n.Logger.append(newCommand("get", key, value))
+	command := newCommand("get", key, value)
+	n.Logger.append(command)
+	log.Printf(n.Id + " added new log " + command.Op + " " + command.Key + " " + command.Value)
 }

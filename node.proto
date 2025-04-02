@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package nodepb;
 
-option go_package = "nodepb";
+option go_package = "proto/nodepb";
 
 service Node {
   rpc RequestVote (VoteRequest) returns (VoteResponse);
