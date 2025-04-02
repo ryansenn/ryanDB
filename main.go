@@ -7,24 +7,21 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/ryansenn/ryanDB/storage"
+	"github.com/ryansenn/ryanDB/core"
 )
 
-var engine = storage.NewEngine()
-var peers map[string]string
+var node *core.Node
 
 func get(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Query().Get("key")
-	log.Println("get key=", key)
-	value := engine.Get(key)
+	value := node.Get(key)
 	w.Write([]byte(value))
 }
 
 func put(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Query().Get("key")
 	value := r.URL.Query().Get("value")
-	log.Println("put key=", key, "value=", value)
-	engine.Put(key, value)
+	node.Put(key, value)
 }
 
 func parsePeers(peersStr string) map[string]string {
@@ -50,7 +47,7 @@ func main() {
 		return
 	}
 
-	peers = parsePeers(*peersStr)
+	node = &core.Node{Id: *id, Port: *port, Peers: parsePeers(*peersStr)}
 
 	http.HandleFunc("/get", get)
 	http.HandleFunc("/put", put)
