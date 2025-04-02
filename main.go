@@ -24,7 +24,7 @@ func put(w http.ResponseWriter, r *http.Request) {
 	node.Put(key, value)
 }
 
-func parsePeers(peersStr string) map[string]string {
+func parsePeers(peersStr string) *map[string]string {
 	res := map[string]string{}
 
 	for _, pair := range strings.Split(peersStr, ",") {
@@ -32,7 +32,7 @@ func parsePeers(peersStr string) map[string]string {
 		res[kv[0]] = kv[1]
 	}
 
-	return res
+	return &res
 }
 
 func main() {
@@ -46,8 +46,7 @@ func main() {
 		fmt.Println("Usage: go run main.go --id=node1 --port=8001 --peers=node1=localhost:8001,node2=localhost:8002,node3=localhost:8003")
 		return
 	}
-
-	node = &core.Node{Id: *id, Port: *port, Peers: parsePeers(*peersStr)}
+	node = core.NewNode(*id, *port, parsePeers(*peersStr))
 
 	http.HandleFunc("/get", get)
 	http.HandleFunc("/put", put)

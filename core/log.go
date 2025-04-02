@@ -12,12 +12,16 @@ type Command struct {
 	Value string
 }
 
+func newCommand(op string, key string, value string) *Command {
+	return &Command{Op: op, Key: key, Value: value}
+}
+
 type Logger struct {
 	file *os.File
 }
 
 func newLogger(id string) *Logger {
-	path := "g" + id
+	path := id + ".log"
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
 
 	if err != nil {
