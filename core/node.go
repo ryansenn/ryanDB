@@ -33,7 +33,7 @@ func (n *Node) Get(key string) string {
 }
 
 func (n *Node) Put(key string, value string) {
-	command := newCommand("get", key, value)
+	command := newCommand("put", key, value)
 	n.Logger.append(command)
 	log.Printf(n.Id + " added new log " + command.Op + " " + command.Key + " " + command.Value)
 }
