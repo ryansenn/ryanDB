@@ -18,21 +18,27 @@ func (n *Node) StartServer() {
 	grpcServer := grpc.NewServer()
 	pb.RegisterNodeServer(grpcServer, &server{})
 	grpcServer.Serve(lis)
+	log.Printf(n.Id + " has started gRPC server")
 }
 
 func (n *Node) StartClients() {
 	for key, addr := range n.Peers {
+		var conn *grpc.ClientConn
+		var err error
+		for {
+			conn, err = grpc.NewClient(
+				addr,
+				grpc.WithTransportCredentials(insecure.NewCredentials()),
+			)
 
-		conn, err := grpc.NewClient(
-			addr,
-			grpc.WithTransportCredentials(insecure.NewCredentials()),
-		)
-
-		if err != nil {
-			log.Fatalf("Failed to connect: %v", err)
+			if err == nil {
+				break
+			}
 		}
 
 		client := pb.NewNodeClient(conn)
 		n.Clients[key] = client
 	}
+
+	log.Printf("%s successfully connected to %d peers", n.Id, len(n.Peers))
 }

@@ -27,7 +27,10 @@ type Node struct {
 }
 
 func NewNode(id string, port string, peers map[string]string) *Node {
-	return &Node{Id: id, Port: port, Peers: peers, State: Follower, Logger: newLogger(id), Storage: storage.NewEngine()}
+	node := Node{Id: id, Port: port, Peers: peers, State: Follower, Logger: newLogger(id), Storage: storage.NewEngine()}
+	node.StartServer()
+	node.StartClients()
+	return &node
 }
 
 func (n *Node) Get(key string) string {
