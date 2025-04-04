@@ -24,7 +24,7 @@ func put(w http.ResponseWriter, r *http.Request) {
 	node.Put(key, value)
 }
 
-func parsePeers(peersStr string) *map[string]string {
+func parsePeers(peersStr string) map[string]string {
 	res := map[string]string{}
 
 	for _, pair := range strings.Split(peersStr, ",") {
@@ -32,7 +32,7 @@ func parsePeers(peersStr string) *map[string]string {
 		res[kv[0]] = kv[1]
 	}
 
-	return &res
+	return res
 }
 
 func main() {
