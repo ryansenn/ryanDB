@@ -46,7 +46,10 @@ func main() {
 		fmt.Println("Usage: go run main.go --id=node1 --port=8001 --peers=node1=localhost:8001,node2=localhost:8002,node3=localhost:8003")
 		return
 	}
+
 	node = core.NewNode(*id, *port, parsePeers(*peersStr))
+	node.StartServer()
+	node.StartClients()
 
 	http.HandleFunc("/get", get)
 	http.HandleFunc("/put", put)

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"log"
 	"net"
 
@@ -11,6 +12,7 @@ import (
 
 type server struct {
 	pb.UnimplementedNodeServer
+	node *Node
 }
 
 func (n *Node) StartServer() {
@@ -48,4 +50,11 @@ func (n *Node) StartClients() {
 	}
 
 	log.Printf("%s successfully connected to %d peers", n.Id, len(n.Peers))
+}
+
+func (s *server) AppendEntries(context.Context, *pb.AppendRequest) (*pb.AppendResponse, error) {
+	node := s.node
+	node.ReceiveHeartbeat()
+
+	return &pb.AppendResponse{Term: node.Term, Success: true}, nil
 }
