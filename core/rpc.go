@@ -14,10 +14,15 @@ type server struct {
 }
 
 func (n *Node) StartServer() {
-	lis, _ := net.Listen("tcp", ":"+n.Port)
+	lis, err := net.Listen("tcp", n.Peers[n.Id])
+
+	if err != nil {
+		log.Fatalf("Failed to listen: %v", err)
+	}
+
 	grpcServer := grpc.NewServer()
 	pb.RegisterNodeServer(grpcServer, &server{})
-	grpcServer.Serve(lis)
+	go grpcServer.Serve(lis)
 	log.Printf(n.Id + " has started gRPC server")
 }
 

@@ -29,7 +29,7 @@ type Node struct {
 func NewNode(id string, port string, peers map[string]string) *Node {
 	node := Node{Id: id, Port: port, Peers: peers, State: Follower, Logger: newLogger(id), Storage: storage.NewEngine()}
 	node.StartServer()
-	node.StartClients()
+	//node.StartClients()
 	return &node
 }
 
