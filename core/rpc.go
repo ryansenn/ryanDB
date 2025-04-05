@@ -27,6 +27,8 @@ func (n *Node) StartServer() {
 }
 
 func (n *Node) StartClients() {
+	n.Clients = map[string]pb.NodeClient{}
+
 	for key, addr := range n.Peers {
 		var conn *grpc.ClientConn
 		var err error
