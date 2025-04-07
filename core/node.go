@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"math/rand"
@@ -27,6 +28,7 @@ type Node struct {
 	State              NodeState
 	Term               int64
 	ResetElectionTimer chan struct{}
+	LeaderId           string
 
 	Logger  *Logger
 	Storage *storage.Engine
@@ -50,16 +52,27 @@ func (n *Node) Get(key string) string {
 }
 
 func (n *Node) Put(key string, value string) {
+
 	command := newCommand("put", key, value)
 	serializedCommand, err := json.Marshal(command)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	entry := pb.LogEntry{Term: n.Term, Command: serializedCommand}
+	switch n.State {
+	case Leader:
+		entry := pb.LogEntry{Term: n.Term, Command: serializedCommand}
+		n.Logger.append(&entry)
+		log.Printf(n.Id + " added new log " + command.Op + " " + command.Key + " " + command.Value)
+		return
 
-	n.Logger.append(&entry)
-	log.Printf(n.Id + " added new log " + command.Op + " " + command.Key + " " + command.Value)
+	case Candidate:
+		return
+
+	case Follower:
+		n.Clients[n.LeaderId].ForwardToLeader(context.Background(), &pb.Command{Command: serializedCommand})
+		return
+	}
 }
 
 func (n *Node) StartElection() {
