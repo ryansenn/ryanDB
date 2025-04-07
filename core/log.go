@@ -10,10 +10,11 @@ type Command struct {
 	Op    string
 	Key   string
 	Value string
+	Term  int64
 }
 
-func newCommand(op string, key string, value string) *Command {
-	return &Command{Op: op, Key: key, Value: value}
+func newCommand(op string, key string, value string, term int64) *Command {
+	return &Command{Op: op, Key: key, Value: value, Term: term}
 }
 
 type Logger struct {

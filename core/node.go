@@ -49,9 +49,14 @@ func (n *Node) Get(key string) string {
 }
 
 func (n *Node) Put(key string, value string) {
-	command := newCommand("put", key, value)
+	command := newCommand("put", key, value, n.Term)
 	n.Logger.append(command)
 	log.Printf(n.Id + " added new log " + command.Op + " " + command.Key + " " + command.Value)
+}
+
+func (n *Node) StartElection() {
+	n.Term += 1
+	n.State = Candidate
 }
 
 func (n *Node) StartElectionTimer() {
@@ -60,7 +65,8 @@ func (n *Node) StartElectionTimer() {
 
 		select {
 		case <-time.After(time.Duration(timeout) * time.Millisecond):
-			return // need to start election ..
+			n.StartElection()
+			return
 
 		case <-n.ResetElectionTimer:
 
