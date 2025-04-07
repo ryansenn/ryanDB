@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/json"
 	"log"
 	"math/rand"
 	"time"
@@ -49,8 +50,15 @@ func (n *Node) Get(key string) string {
 }
 
 func (n *Node) Put(key string, value string) {
-	command := newCommand("put", key, value, n.Term)
-	n.Logger.append(command)
+	command := newCommand("put", key, value)
+	serializedCommand, err := json.Marshal(command)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	entry := pb.LogEntry{Term: n.Term, Command: serializedCommand}
+
+	n.Logger.append(&entry)
 	log.Printf(n.Id + " added new log " + command.Op + " " + command.Key + " " + command.Value)
 }
 
