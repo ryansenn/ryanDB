@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net"
 
@@ -52,9 +53,36 @@ func (n *Node) StartClients() {
 	log.Printf("%s successfully connected to %d peers", n.Id, len(n.Peers))
 }
 
-func (s *server) AppendEntries(context.Context, *pb.AppendRequest) (*pb.AppendResponse, error) {
+func (s *server) AppendEntries(ctx context.Context, req *pb.AppendRequest) (*pb.AppendResponse, error) {
 	node := s.node
 	node.ReceiveHeartbeat()
 
 	return &pb.AppendResponse{Term: node.Term, Success: true}, nil
+}
+
+func (s *server) RequestVote(context.Context, *pb.VoteRequest) (*pb.VoteResponse, error) {
+	return nil, nil
+}
+
+func (s *server) ForwardToLeader(ctx context.Context, command *pb.Command) (*pb.CommandResponse, error) {
+	var cmd Command
+	var res pb.CommandResponse
+	res.Success = true
+
+	err := json.Unmarshal(command.Command, &cmd)
+
+	if err != nil {
+		res.Success = false
+		return &res, err
+	}
+
+	if cmd.Op == "get" {
+		res.Result = []byte(s.node.Get(cmd.Key))
+	}
+
+	if cmd.Op == "put" {
+		s.node.Put(cmd.Key, cmd.Value)
+	}
+
+	return &res, nil
 }
