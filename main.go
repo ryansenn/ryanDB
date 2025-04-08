@@ -14,13 +14,26 @@ var node *core.Node
 
 func get(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Query().Get("key")
-	value := node.Get(key)
+	var value string
+	if node.State == core.Follower {
+		value = node.ForwardToLeader(core.NewCommand("get", key, ""))
+		w.Write([]byte(value))
+		return
+	}
+
+	value = node.Get(key)
 	w.Write([]byte(value))
 }
 
 func put(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Query().Get("key")
 	value := r.URL.Query().Get("value")
+
+	if node.State == core.Follower {
+		node.ForwardToLeader(core.NewCommand("put", key, value))
+		return
+	}
+
 	node.Put(key, value)
 }
 

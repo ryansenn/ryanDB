@@ -27,6 +27,7 @@ type Node struct {
 
 	State              NodeState
 	Term               int64
+	LogIndex           int
 	ResetElectionTimer chan struct{}
 	LeaderId           string
 
@@ -53,26 +54,31 @@ func (n *Node) Get(key string) string {
 
 func (n *Node) Put(key string, value string) {
 
-	command := newCommand("put", key, value)
+	command := NewCommand("put", key, value)
 	serializedCommand, err := json.Marshal(command)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	switch n.State {
-	case Leader:
-		entry := pb.LogEntry{Term: n.Term, Command: serializedCommand}
-		n.Logger.append(&entry)
-		log.Printf(n.Id + " added new log " + command.Op + " " + command.Key + " " + command.Value)
-		return
+	entry := pb.LogEntry{Term: n.Term, Command: serializedCommand}
+	n.Logger.append(&entry)
+	log.Printf(n.Id + " added new log " + command.Op + " " + command.Key + " " + command.Value)
+}
 
-	case Candidate:
-		return
-
-	case Follower:
-		n.Clients[n.LeaderId].ForwardToLeader(context.Background(), &pb.Command{Command: serializedCommand})
-		return
+func (n *Node) ForwardToLeader(command *Command) string {
+	serializedCommand, err := json.Marshal(*command)
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	log.Printf(n.Id + " has forwarded command to leader")
+	response, err := n.Clients[n.LeaderId].ForwardToLeader(context.Background(), &pb.Command{Command: serializedCommand})
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return string(response.Result)
 }
 
 func (n *Node) StartElection() {
