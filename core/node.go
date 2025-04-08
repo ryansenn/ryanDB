@@ -27,7 +27,8 @@ type Node struct {
 
 	State              NodeState
 	Term               int64
-	LogIndex           int
+	LogIndex           int64
+	LastLogTerm        int64
 	ResetElectionTimer chan struct{}
 	LeaderId           string
 
@@ -37,14 +38,16 @@ type Node struct {
 
 func NewNode(id, port string, peers map[string]string) *Node {
 	return &Node{
-		Id:      id,
-		Port:    port,
-		Peers:   peers,
-		Clients: make(map[string]pb.NodeClient),
-		State:   Follower,
-		Term:    0,
-		Logger:  newLogger(id),
-		Storage: storage.NewEngine(),
+		Id:          id,
+		Port:        port,
+		Peers:       peers,
+		Clients:     make(map[string]pb.NodeClient),
+		State:       Follower,
+		Term:        0,
+		LogIndex:    0,
+		LastLogTerm: 0,
+		Logger:      newLogger(id),
+		Storage:     storage.NewEngine(),
 	}
 }
 
@@ -53,15 +56,16 @@ func (n *Node) Get(key string) string {
 }
 
 func (n *Node) Put(key string, value string) {
-
 	command := NewCommand("put", key, value)
 	serializedCommand, err := json.Marshal(command)
+
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	entry := pb.LogEntry{Term: n.Term, Command: serializedCommand}
 	n.Logger.append(&entry)
+	n.LogIndex += 1
 	log.Printf(n.Id + " added new log " + command.Op + " " + command.Key + " " + command.Value)
 }
 
@@ -84,6 +88,13 @@ func (n *Node) ForwardToLeader(command *Command) string {
 func (n *Node) StartElection() {
 	n.Term += 1
 	n.State = Candidate
+
+	for id, client := range n.Clients {
+		if id != n.Id {
+			voteReq := pb.VoteRequest{Term: n.Term, CandidateId: n.Id, LastLogIndex: n.LogIndex, LastLogTerm: n.LastLogTerm}
+			client.RequestVote(context.Background(), &voteReq)
+		}
+	}
 }
 
 func (n *Node) StartElectionTimer() {
