@@ -14,7 +14,7 @@ type Command struct {
 	Value string
 }
 
-func newCommand(op string, key string, value string) *Command {
+func NewCommand(op string, key string, value string) *Command {
 	return &Command{Op: op, Key: key, Value: value}
 }
 

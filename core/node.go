@@ -88,12 +88,34 @@ func (n *Node) ForwardToLeader(command *Command) string {
 func (n *Node) StartElection() {
 	n.Term += 1
 	n.State = Candidate
+	yesVote := 1
 
 	for id, client := range n.Clients {
 		if id != n.Id {
-			voteReq := pb.VoteRequest{Term: n.Term, CandidateId: n.Id, LastLogIndex: n.LogIndex, LastLogTerm: n.LastLogTerm}
-			client.RequestVote(context.Background(), &voteReq)
+
+			voteReq := pb.VoteRequest{
+				Term:         n.Term,
+				CandidateId:  n.Id,
+				LastLogIndex: n.LogIndex,
+				LastLogTerm:  n.LastLogTerm,
+			}
+
+			voteResp, err := client.RequestVote(context.Background(), &voteReq)
+
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if voteResp.VoteGranted {
+				yesVote += 1
+			}
 		}
+	}
+
+	if yesVote > len(n.Peers)/2 {
+		n.State = Leader
+	} else {
+		n.State = Follower
 	}
 }
 
