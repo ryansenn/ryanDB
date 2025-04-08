@@ -24,7 +24,7 @@ const (
 type VoteRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Term          int64                  `protobuf:"varint,1,opt,name=term,proto3" json:"term,omitempty"`
-	CandidateId   int64                  `protobuf:"varint,2,opt,name=candidate_id,json=candidateId,proto3" json:"candidate_id,omitempty"`
+	CandidateId   string                 `protobuf:"bytes,2,opt,name=candidate_id,json=candidateId,proto3" json:"candidate_id,omitempty"`
 	LastLogIndex  int64                  `protobuf:"varint,3,opt,name=last_log_index,json=lastLogIndex,proto3" json:"last_log_index,omitempty"`
 	LastLogTerm   int64                  `protobuf:"varint,4,opt,name=last_log_term,json=lastLogTerm,proto3" json:"last_log_term,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -68,11 +68,11 @@ func (x *VoteRequest) GetTerm() int64 {
 	return 0
 }
 
-func (x *VoteRequest) GetCandidateId() int64 {
+func (x *VoteRequest) GetCandidateId() string {
 	if x != nil {
 		return x.CandidateId
 	}
-	return 0
+	return ""
 }
 
 func (x *VoteRequest) GetLastLogIndex() int64 {
@@ -144,7 +144,7 @@ func (x *VoteResponse) GetVoteGranted() bool {
 type AppendRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Term          int64                  `protobuf:"varint,1,opt,name=term,proto3" json:"term,omitempty"`
-	LeaderId      int64                  `protobuf:"varint,2,opt,name=leader_id,json=leaderId,proto3" json:"leader_id,omitempty"`
+	LeaderId      string                 `protobuf:"bytes,2,opt,name=leader_id,json=leaderId,proto3" json:"leader_id,omitempty"`
 	PrevLogIndex  int64                  `protobuf:"varint,3,opt,name=prev_log_index,json=prevLogIndex,proto3" json:"prev_log_index,omitempty"`
 	PrevLogTerm   int64                  `protobuf:"varint,4,opt,name=prev_log_term,json=prevLogTerm,proto3" json:"prev_log_term,omitempty"`
 	Entries       []*LogEntry            `protobuf:"bytes,5,rep,name=entries,proto3" json:"entries,omitempty"`
@@ -190,11 +190,11 @@ func (x *AppendRequest) GetTerm() int64 {
 	return 0
 }
 
-func (x *AppendRequest) GetLeaderId() int64 {
+func (x *AppendRequest) GetLeaderId() string {
 	if x != nil {
 		return x.LeaderId
 	}
-	return 0
+	return ""
 }
 
 func (x *AppendRequest) GetPrevLogIndex() int64 {
@@ -433,7 +433,7 @@ const file_node_proto_rawDesc = "" +
 	"node.proto\x12\x06nodepb\"\x8e\x01\n" +
 	"\vVoteRequest\x12\x12\n" +
 	"\x04term\x18\x01 \x01(\x03R\x04term\x12!\n" +
-	"\fcandidate_id\x18\x02 \x01(\x03R\vcandidateId\x12$\n" +
+	"\fcandidate_id\x18\x02 \x01(\tR\vcandidateId\x12$\n" +
 	"\x0elast_log_index\x18\x03 \x01(\x03R\flastLogIndex\x12\"\n" +
 	"\rlast_log_term\x18\x04 \x01(\x03R\vlastLogTerm\"E\n" +
 	"\fVoteResponse\x12\x12\n" +
@@ -441,7 +441,7 @@ const file_node_proto_rawDesc = "" +
 	"\fvote_granted\x18\x02 \x01(\bR\vvoteGranted\"\xdb\x01\n" +
 	"\rAppendRequest\x12\x12\n" +
 	"\x04term\x18\x01 \x01(\x03R\x04term\x12\x1b\n" +
-	"\tleader_id\x18\x02 \x01(\x03R\bleaderId\x12$\n" +
+	"\tleader_id\x18\x02 \x01(\tR\bleaderId\x12$\n" +
 	"\x0eprev_log_index\x18\x03 \x01(\x03R\fprevLogIndex\x12\"\n" +
 	"\rprev_log_term\x18\x04 \x01(\x03R\vprevLogTerm\x12*\n" +
 	"\aentries\x18\x05 \x03(\v2\x10.nodepb.LogEntryR\aentries\x12#\n" +
