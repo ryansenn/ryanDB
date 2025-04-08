@@ -30,6 +30,7 @@ type Node struct {
 	LogIndex           int64
 	LastLogTerm        int64
 	ResetElectionTimer chan struct{}
+	VoteFor            string
 	LeaderId           string
 
 	Logger  *Logger
@@ -46,6 +47,7 @@ func NewNode(id, port string, peers map[string]string) *Node {
 		Term:        0,
 		LogIndex:    0,
 		LastLogTerm: 0,
+		VoteFor:     "",
 		Logger:      newLogger(id),
 		Storage:     storage.NewEngine(),
 	}
@@ -87,6 +89,7 @@ func (n *Node) ForwardToLeader(command *Command) string {
 
 func (n *Node) StartElection() {
 	n.Term += 1
+	n.VoteFor = ""
 	n.State = Candidate
 	yesVote := 1
 

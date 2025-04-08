@@ -60,8 +60,30 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendRequest) (*pb.
 	return &pb.AppendResponse{Term: node.Term, Success: true}, nil
 }
 
-func (s *server) RequestVote(context.Context, *pb.VoteRequest) (*pb.VoteResponse, error) {
-	return nil, nil
+func (s *server) RequestVote(ctx context.Context, req *pb.VoteRequest) (*pb.VoteResponse, error) {
+	if s.node.Term < req.Term {
+		s.node.State = Follower
+		s.node.Term = req.Term
+		s.node.VoteFor = ""
+	}
+
+	resp := pb.VoteResponse{Term: s.node.Term, VoteGranted: false}
+
+	if s.node.VoteFor != "" && s.node.VoteFor != req.CandidateId {
+		return &resp, nil
+	}
+
+	if s.node.Term > req.Term {
+		return &resp, nil
+	}
+
+	if s.node.LastLogTerm > req.LastLogTerm || (s.node.LastLogTerm == req.LastLogTerm && s.node.LogIndex > req.LastLogIndex) {
+		return &resp, nil
+	}
+
+	resp.VoteGranted = true
+	s.node.VoteFor = req.CandidateId
+	return &resp, nil
 }
 
 func (s *server) ForwardToLeader(ctx context.Context, command *pb.Command) (*pb.CommandResponse, error) {
