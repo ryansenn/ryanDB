@@ -61,12 +61,11 @@ func main() {
 	}
 
 	node = core.NewNode(*id, *port, parsePeers(*peersStr))
-	node.StartServer()
-	node.StartClients()
+	node.Init()
 
 	http.HandleFunc("/get", get)
 	http.HandleFunc("/put", put)
 
-	log.Printf("Server ID: %s | Listening on: %s | Peers: %s", *id, *port, *peersStr)
+	//log.Printf("Server ID: %s | Listening on: %s | Peers: %s", *id, *port, *peersStr)
 	log.Fatal(http.ListenAndServe(":"+*port, nil))
 }

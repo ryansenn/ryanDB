@@ -71,6 +71,13 @@ func (n *Node) Put(key string, value string) {
 	log.Printf(n.Id + " added new log " + command.Op + " " + command.Key + " " + command.Value)
 }
 
+func (n *Node) Init() {
+	n.StartServer()
+	n.StartClients()
+	log.Printf(n.Id + " is now running.")
+	n.StartElectionTimer()
+}
+
 func (n *Node) ForwardToLeader(command *Command) string {
 	serializedCommand, err := json.Marshal(*command)
 	if err != nil {
@@ -93,7 +100,7 @@ func (n *Node) StartElection() {
 	n.State = Candidate
 	yesVote := 1
 
-	log.Printf("Node %s started election for term %d", n.Id, n.Term)
+	log.Printf("%s started election for term %d", n.Id, n.Term)
 
 	for id, client := range n.Clients {
 		if id != n.Id {
@@ -119,10 +126,10 @@ func (n *Node) StartElection() {
 
 	if yesVote > len(n.Peers)/2 {
 		n.State = Leader
-		log.Printf("Node %s becomes Leader for term %d", n.Id, n.Term)
+		log.Printf("%s becomes Leader for term %d", n.Id, n.Term)
 	} else {
 		n.State = Follower
-		log.Printf("Node %s becomes Follower for term %d", n.Id, n.Term)
+		log.Printf("%s becomes Follower for term %d", n.Id, n.Term)
 	}
 }
 

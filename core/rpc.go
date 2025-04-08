@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net"
+	"time"
 
 	pb "github.com/ryansenn/ryanDB/proto/nodepb"
 	"google.golang.org/grpc"
@@ -24,33 +25,42 @@ func (n *Node) StartServer() {
 	}
 
 	grpcServer := grpc.NewServer()
-	pb.RegisterNodeServer(grpcServer, &server{})
+	pb.RegisterNodeServer(grpcServer, &server{node: n})
 	go grpcServer.Serve(lis)
-	log.Printf(n.Id + " has started gRPC server")
 }
 
 func (n *Node) StartClients() {
 	n.Clients = map[string]pb.NodeClient{}
 
 	for key, addr := range n.Peers {
-		var conn *grpc.ClientConn
-		var err error
+		conn, err := grpc.NewClient(
+			addr,
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		client := pb.NewNodeClient(conn)
+		n.Clients[key] = client
+
 		for {
-			conn, err = grpc.NewClient(
-				addr,
-				grpc.WithTransportCredentials(insecure.NewCredentials()),
-			)
+			dummyReq := pb.VoteRequest{
+				Term:         -1,
+				CandidateId:  n.Id,
+				LastLogIndex: -1,
+				LastLogTerm:  -1,
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			_, err = client.RequestVote(ctx, &dummyReq)
+			cancel()
 
 			if err == nil {
 				break
 			}
 		}
-
-		client := pb.NewNodeClient(conn)
-		n.Clients[key] = client
 	}
-
-	log.Printf("%s successfully connected to %d peers", n.Id, len(n.Peers))
 }
 
 func (s *server) AppendEntries(ctx context.Context, req *pb.AppendRequest) (*pb.AppendResponse, error) {
@@ -65,7 +75,6 @@ func (s *server) RequestVote(ctx context.Context, req *pb.VoteRequest) (*pb.Vote
 		s.node.State = Follower
 		s.node.Term = req.Term
 		s.node.VoteFor = ""
-		log.Printf("Term updated to %d due to vote request from %s", req.Term, req.CandidateId)
 	}
 
 	resp := pb.VoteResponse{Term: s.node.Term, VoteGranted: false}
@@ -84,7 +93,7 @@ func (s *server) RequestVote(ctx context.Context, req *pb.VoteRequest) (*pb.Vote
 
 	resp.VoteGranted = true
 	s.node.VoteFor = req.CandidateId
-	log.Printf("Voted for %s in term %d", req.CandidateId, s.node.Term)
+	log.Printf("%s has granted vote to %s in term %d", s.node.Id, req.CandidateId, s.node.Term)
 	return &resp, nil
 }
 
