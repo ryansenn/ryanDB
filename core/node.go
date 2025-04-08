@@ -93,6 +93,8 @@ func (n *Node) StartElection() {
 	n.State = Candidate
 	yesVote := 1
 
+	log.Printf("Node %s started election for term %d", n.Id, n.Term)
+
 	for id, client := range n.Clients {
 		if id != n.Id {
 
@@ -117,8 +119,10 @@ func (n *Node) StartElection() {
 
 	if yesVote > len(n.Peers)/2 {
 		n.State = Leader
+		log.Printf("Node %s becomes Leader for term %d", n.Id, n.Term)
 	} else {
 		n.State = Follower
+		log.Printf("Node %s becomes Follower for term %d", n.Id, n.Term)
 	}
 }
 

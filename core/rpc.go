@@ -65,6 +65,7 @@ func (s *server) RequestVote(ctx context.Context, req *pb.VoteRequest) (*pb.Vote
 		s.node.State = Follower
 		s.node.Term = req.Term
 		s.node.VoteFor = ""
+		log.Printf("Term updated to %d due to vote request from %s", req.Term, req.CandidateId)
 	}
 
 	resp := pb.VoteResponse{Term: s.node.Term, VoteGranted: false}
@@ -83,6 +84,7 @@ func (s *server) RequestVote(ctx context.Context, req *pb.VoteRequest) (*pb.Vote
 
 	resp.VoteGranted = true
 	s.node.VoteFor = req.CandidateId
+	log.Printf("Voted for %s in term %d", req.CandidateId, s.node.Term)
 	return &resp, nil
 }
 
