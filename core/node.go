@@ -33,6 +33,9 @@ type Node struct {
 	VoteFor            string
 	LeaderId           string
 
+	NextIndex  map[string]int64
+	MatchIndex map[string]int64
+
 	Logger  *Logger
 	Storage *storage.Engine
 }
@@ -126,10 +129,29 @@ func (n *Node) StartElection() {
 
 	if yesVote > len(n.Peers)/2 {
 		n.State = Leader
+		n.StartHeartbeat()
 		log.Printf("%s becomes Leader for term %d", n.Id, n.Term)
 	} else {
 		n.State = Follower
 		log.Printf("%s becomes Follower for term %d", n.Id, n.Term)
+	}
+}
+
+func (n *Node) StartHeartbeat() {
+
+	for n.State == Leader {
+
+		for _, client := range n.Clients {
+			emptyEntries := pb.AppendRequest{
+				Term: n.Term, LeaderId: n.Id,
+				PrevLogIndex: n.LogIndex,
+				PrevLogTerm:  n.LastLogTerm,
+			}
+
+			client.AppendEntries(context.Background(), &emptyEntries)
+		}
+
+		time.Sleep(50 * time.Microsecond)
 	}
 }
 
@@ -140,7 +162,6 @@ func (n *Node) StartElectionTimer() {
 		select {
 		case <-time.After(time.Duration(timeout) * time.Millisecond):
 			n.StartElection()
-			return
 
 		case <-n.ResetElectionTimer:
 
