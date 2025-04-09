@@ -42,17 +42,18 @@ type Node struct {
 
 func NewNode(id, port string, peers map[string]string) *Node {
 	return &Node{
-		Id:          id,
-		Port:        port,
-		Peers:       peers,
-		Clients:     make(map[string]pb.NodeClient),
-		State:       Follower,
-		Term:        0,
-		LogIndex:    0,
-		LastLogTerm: 0,
-		VoteFor:     "",
-		Logger:      newLogger(id),
-		Storage:     storage.NewEngine(),
+		Id:                 id,
+		Port:               port,
+		Peers:              peers,
+		Clients:            make(map[string]pb.NodeClient),
+		State:              Follower,
+		Term:               0,
+		LogIndex:           0,
+		LastLogTerm:        0,
+		ResetElectionTimer: make(chan struct{}, 1),
+		VoteFor:            "",
+		Logger:             newLogger(id),
+		Storage:            storage.NewEngine(),
 	}
 }
 
