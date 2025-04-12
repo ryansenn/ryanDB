@@ -83,6 +83,7 @@ func (n *Node) Init() {
 	n.StartClients()
 	log.Printf(n.Id + " is now running.")
 	n.StartElectionTimer()
+	n.StartReplicationWorkers()
 }
 
 func (n *Node) ForwardToLeader(command *Command) string {
@@ -111,12 +112,18 @@ func (n *Node) StartElection() {
 
 	for id, client := range n.Clients {
 		if id != n.Id {
+			prevIndex := int64(len(n.Log) - 1)
+			prevTerm := int64(0)
+
+			if prevIndex >= 0 && prevIndex < int64(len(n.Log)) {
+				prevTerm = n.Log[prevIndex].Term
+			}
 
 			voteReq := pb.VoteRequest{
 				Term:         n.Term,
 				CandidateId:  n.Id,
-				LastLogIndex: n.LogIndex,
-				LastLogTerm:  n.LastLogTerm,
+				LastLogIndex: prevIndex,
+				LastLogTerm:  prevTerm,
 			}
 
 			voteResp, err := client.RequestVote(context.Background(), &voteReq)
@@ -141,15 +148,56 @@ func (n *Node) StartElection() {
 	}
 }
 
+func (n *Node) ReplicateToFollower(id string) {
+	for {
+		startIndex := n.NextIndex[id]
+
+		if startIndex < int64(len(n.Log)) {
+			prevIndex := int64(startIndex - 1)
+			prevTerm := int64(0)
+
+			if prevIndex >= 0 && prevIndex < int64(len(n.Log)) {
+				prevTerm = n.Log[prevIndex].Term
+			}
+			req := pb.AppendRequest{
+				Term:         n.Term,
+				LeaderId:     n.Id,
+				PrevLogIndex: prevIndex,
+				PrevLogTerm:  prevTerm,
+				Entries:      n.Log[startIndex:],
+			}
+
+			resp, _ := n.Clients[id].AppendEntries(context.Background(), &req)
+
+			if resp.Success {
+				added := int64(len(req.Entries))
+				n.NextIndex[id] += added
+				n.MatchIndex[id] = n.NextIndex[id] - 1
+			} else {
+				n.NextIndex[id]--
+			}
+		}
+
+		time.Sleep(500 * time.Millisecond)
+	}
+}
+
+func (n *Node) StartReplicationWorkers() {
+	for id := range n.Peers {
+		go n.ReplicateToFollower(id)
+	}
+}
+
 func (n *Node) StartHeartbeat() {
 
 	for n.State == Leader {
 
 		for _, client := range n.Clients {
 			emptyEntries := pb.AppendRequest{
-				Term: n.Term, LeaderId: n.Id,
-				PrevLogIndex: n.LogIndex,
-				PrevLogTerm:  n.LastLogTerm,
+				Term:         n.Term,
+				LeaderId:     n.Id,
+				PrevLogIndex: 0,
+				PrevLogTerm:  0,
 			}
 
 			client.AppendEntries(context.Background(), &emptyEntries)
