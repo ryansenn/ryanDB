@@ -24,21 +24,19 @@ type Node struct {
 	Port    string
 	Peers   map[string]string
 	Clients map[string]pb.NodeClient
+	State   NodeState
 
-	State              NodeState
-	Term               int64
-	LogIndex           int64
-	LastLogTerm        int64
-	ResetElectionTimer chan struct{}
-	VoteFor            string
-	LeaderId           string
-
+	Term        int64
+	VoteFor     string
 	CommitIndex int64
+	LastApplied int64
 	NextIndex   map[string]int64
 	MatchIndex  map[string]int64
 
-	Logger  *Logger
-	Storage *storage.Engine
+	LeaderId           string
+	ResetElectionTimer chan struct{}
+	Logger             *Logger
+	Storage            *storage.Engine
 }
 
 func NewNode(id, port string, peers map[string]string) *Node {
@@ -49,13 +47,13 @@ func NewNode(id, port string, peers map[string]string) *Node {
 		Clients:            make(map[string]pb.NodeClient),
 		State:              Follower,
 		Term:               0,
-		LogIndex:           0,
-		LastLogTerm:        0,
-		ResetElectionTimer: make(chan struct{}, 1),
 		VoteFor:            "",
 		CommitIndex:        0,
+		LastApplied:        0,
 		NextIndex:          make(map[string]int64),
 		MatchIndex:         make(map[string]int64),
+		LeaderId:           "",
+		ResetElectionTimer: make(chan struct{}, 1),
 		Logger:             newLogger(id),
 		Storage:            storage.NewEngine(),
 	}
@@ -78,15 +76,25 @@ func (n *Node) Put(key string, value string) {
 	n.LogIndex += 1
 	log.Printf(n.Id + " added uncommitted log " + command.Op + " " + command.Key + " " + command.Value)
 
-	for id, client := range n.Clients {
+	yesVotes := 1
+
+	for _, client := range n.Clients {
 		req := pb.AppendRequest{
 			Term:         n.Term,
 			LeaderId:     n.Id,
-			PrevLogIndex: n.LogIndex,
+			PrevLogIndex: n.LogIndex - 1,
 			PrevLogTerm:  n.LastLogTerm,
 			Entries:      []*pb.LogEntry{&entry},
 		}
-		resp, err := client.AppendEntries(context.Background(), &req)
+		resp, _ := client.AppendEntries(context.Background(), &req)
+
+		if resp.Success {
+			yesVotes += 1
+		}
+	}
+
+	if yesVotes > len(n.Peers)/2 {
+		n.CommitIndex += 1
 	}
 }
 
