@@ -32,6 +32,7 @@ type Node struct {
 	LastApplied int64
 	NextIndex   map[string]int64
 	MatchIndex  map[string]int64
+	Log         []*pb.LogEntry
 
 	LeaderId           string
 	ResetElectionTimer chan struct{}
@@ -52,6 +53,7 @@ func NewNode(id, port string, peers map[string]string) *Node {
 		LastApplied:        0,
 		NextIndex:          make(map[string]int64),
 		MatchIndex:         make(map[string]int64),
+		Log:                make([]*pb.LogEntry, 0),
 		LeaderId:           "",
 		ResetElectionTimer: make(chan struct{}, 1),
 		Logger:             newLogger(id),
@@ -73,29 +75,7 @@ func (n *Node) Put(key string, value string) {
 
 	entry := pb.LogEntry{Term: n.Term, Command: serializedCommand}
 	n.Logger.append(&entry)
-	n.LogIndex += 1
-	log.Printf(n.Id + " added uncommitted log " + command.Op + " " + command.Key + " " + command.Value)
-
-	yesVotes := 1
-
-	for _, client := range n.Clients {
-		req := pb.AppendRequest{
-			Term:         n.Term,
-			LeaderId:     n.Id,
-			PrevLogIndex: n.LogIndex - 1,
-			PrevLogTerm:  n.LastLogTerm,
-			Entries:      []*pb.LogEntry{&entry},
-		}
-		resp, _ := client.AppendEntries(context.Background(), &req)
-
-		if resp.Success {
-			yesVotes += 1
-		}
-	}
-
-	if yesVotes > len(n.Peers)/2 {
-		n.CommitIndex += 1
-	}
+	n.Log = append(n.Log, &entry)
 }
 
 func (n *Node) Init() {
