@@ -83,7 +83,14 @@ func (n *Node) Init() {
 	n.StartClients()
 	log.Printf(n.Id + " is now running.")
 	n.StartElectionTimer()
-	n.StartReplicationWorkers()
+}
+
+func (n *Node) GetLogTerm(index int) int64 {
+	if index == -1 {
+		return n.Log[len(n.Log)-1].Term
+	}
+
+	return n.Log[index].Term
 }
 
 func (n *Node) ForwardToLeader(command *Command) string {
@@ -116,7 +123,7 @@ func (n *Node) StartElection() {
 			prevTerm := int64(0)
 
 			if prevIndex >= 0 && prevIndex < int64(len(n.Log)) {
-				prevTerm = n.Log[prevIndex].Term
+				prevTerm = n.GetLogTerm(int(prevIndex))
 			}
 
 			voteReq := pb.VoteRequest{
@@ -141,6 +148,7 @@ func (n *Node) StartElection() {
 	if yesVote > len(n.Peers)/2 {
 		n.State = Leader
 		n.StartHeartbeat()
+		n.StartReplicationWorkers()
 		log.Printf("%s becomes Leader for term %d", n.Id, n.Term)
 	} else {
 		n.State = Follower
@@ -157,7 +165,7 @@ func (n *Node) ReplicateToFollower(id string) {
 			prevTerm := int64(0)
 
 			if prevIndex >= 0 && prevIndex < int64(len(n.Log)) {
-				prevTerm = n.Log[prevIndex].Term
+				prevTerm = n.GetLogTerm(int(prevIndex))
 			}
 			req := pb.AppendRequest{
 				Term:         n.Term,
