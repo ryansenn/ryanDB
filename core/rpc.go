@@ -64,10 +64,34 @@ func (n *Node) StartClients() {
 }
 
 func (s *server) AppendEntries(ctx context.Context, req *pb.AppendRequest) (*pb.AppendResponse, error) {
-	node := s.node
-	node.ReceiveHeartbeat()
+	s.node.ReceiveHeartbeat()
 
-	return &pb.AppendResponse{Term: node.Term, Success: true}, nil
+	resp := pb.AppendResponse{Term: s.node.Term, Success: false}
+
+	if s.node.Term > req.Term {
+		return &resp, nil
+	}
+
+	if req.Term > s.node.Term {
+		s.node.Term = req.Term
+		s.node.State = Follower
+	}
+
+	if len(s.node.Log)-1 < int(req.PrevLogIndex) {
+		return &resp, nil
+	}
+
+	if s.node.GetLogTerm(int(req.PrevLogIndex)) != req.PrevLogTerm {
+		return &resp, nil
+	}
+
+	s.node.Log = s.node.Log[:req.PrevLogIndex+1]
+
+	s.node.Log = append(s.node.Log, req.Entries...)
+
+	resp.Success = true
+	resp.Term = s.node.Term
+	return &resp, nil
 }
 
 func (s *server) RequestVote(ctx context.Context, req *pb.VoteRequest) (*pb.VoteResponse, error) {

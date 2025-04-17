@@ -157,7 +157,7 @@ func (n *Node) StartElection() {
 }
 
 func (n *Node) ReplicateToFollower(id string) {
-	for {
+	for n.State == Leader {
 		startIndex := n.NextIndex[id]
 
 		if startIndex < int64(len(n.Log)) {
