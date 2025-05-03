@@ -111,7 +111,7 @@ func (s *server) RequestVote(ctx context.Context, req *pb.VoteRequest) (*pb.Vote
 		return &resp, nil
 	}
 
-	if s.node.GetLogTerm(-1) > req.LastLogTerm || (s.node.GetLogTerm(-1) == req.LastLogTerm && int64(len(s.node.Log)) > req.LastLogIndex) {
+	if s.node.GetLogTerm(-1) > req.LastLogTerm || (s.node.GetLogTerm(-1) == req.LastLogTerm && int64(len(s.node.Log))-1 > req.LastLogIndex) {
 		return &resp, nil
 	}
 

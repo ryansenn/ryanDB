@@ -65,29 +65,35 @@ func (n *Node) Get(key string) string {
 	return ""
 }
 
-func (n *Node) Put(key string, value string) {
+func (n *Node) Put(key string, value string) string {
 	command := NewCommand("put", key, value)
 	serializedCommand, err := json.Marshal(command)
 
 	if err != nil {
 		log.Fatal(err)
+		return "false"
 	}
 
 	entry := pb.LogEntry{Term: n.Term, Command: serializedCommand}
 	n.Logger.append(&entry)
 	n.Log = append(n.Log, &entry)
+
+	return "true"
 }
 
 func (n *Node) Init() {
+	log.Printf(n.Id + " has been initialized.")
 	n.StartServer()
 	n.StartClients()
-	log.Printf(n.Id + " is now running.")
 	n.StartElectionTimer()
 }
 
 func (n *Node) GetLogTerm(index int) int64 {
 	if index == -1 {
-		return n.Log[len(n.Log)-1].Term
+		if len(n.Log) > 0 {
+			return n.Log[len(n.Log)-1].Term
+		}
+		return 0
 	}
 
 	return n.Log[index].Term
@@ -147,8 +153,8 @@ func (n *Node) StartElection() {
 
 	if yesVote > len(n.Peers)/2 {
 		n.State = Leader
-		n.StartHeartbeat()
-		n.StartReplicationWorkers()
+		go n.StartHeartbeat()
+		go n.StartReplicationWorkers()
 		log.Printf("%s becomes Leader for term %d", n.Id, n.Term)
 	} else {
 		n.State = Follower

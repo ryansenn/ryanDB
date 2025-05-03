@@ -13,6 +13,7 @@ import (
 var node *core.Node
 
 func get(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain")
 	key := r.URL.Query().Get("key")
 	var value string
 	if node.State == core.Follower {
@@ -26,15 +27,18 @@ func get(w http.ResponseWriter, r *http.Request) {
 }
 
 func put(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain")
 	key := r.URL.Query().Get("key")
 	value := r.URL.Query().Get("value")
 
+	res := ""
 	if node.State == core.Follower {
-		node.ForwardToLeader(core.NewCommand("put", key, value))
-		return
+		res = node.ForwardToLeader(core.NewCommand("put", key, value))
+	} else {
+		res = node.Put(key, value)
 	}
 
-	node.Put(key, value)
+	w.Write([]byte(res))
 }
 
 func parsePeers(peersStr string) map[string]string {
@@ -61,7 +65,7 @@ func main() {
 	}
 
 	node = core.NewNode(*id, *port, parsePeers(*peersStr))
-	node.Init()
+	go node.Init()
 
 	http.HandleFunc("/get", get)
 	http.HandleFunc("/put", put)
