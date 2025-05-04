@@ -85,8 +85,15 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendRequest) (*pb.
 		return &resp, nil
 	}
 
-	s.node.Log = s.node.Log[:req.PrevLogIndex+1]
-	s.node.Log = append(s.node.Log, req.Entries...)
+	var entries []*LogEntry
+
+	for _, entry := range req.Entries {
+		var cmd Command
+		json.Unmarshal(entry.Command, cmd)
+		entries = append(entries, NewLogEntry(entry.Term, &cmd))
+	}
+
+	s.node.AppendLogs(req.PrevLogIndex, entries)
 
 	resp.Success = true
 	resp.Term = s.node.Term
@@ -136,13 +143,7 @@ func (s *server) ForwardToLeader(ctx context.Context, command *pb.Command) (*pb.
 		return &res, err
 	}
 
-	if cmd.Op == "get" {
-		res.Result = []byte(s.node.Get(cmd.Key))
-	}
-
-	if cmd.Op == "put" {
-		s.node.Put(cmd.Key, cmd.Value)
-	}
+	s.node.AppendLog(NewLogEntry(s.node.Term, NewCommand(cmd.Op, cmd.Key, cmd.Value)))
 
 	return &res, nil
 }

@@ -68,10 +68,16 @@ func (n *Node) Init() {
 	n.StartElectionTimer()
 }
 
-func (n *Node) AppendLog(term int64, command *Command) {
-	entry := NewLogEntry(term, command)
+func (n *Node) AppendLog(entry *LogEntry) {
 	n.Logger.append(entry)
 	n.Log = append(n.Log, entry)
+
+}
+
+func (n *Node) AppendLogs(PrevLogIndex int64, entries []*LogEntry) {
+
+	n.Log = n.Log[:PrevLogIndex+1]
+	n.Log = append(n.Log, entries...)
 }
 
 func (n *Node) GetLogTerm(index int) int64 {
@@ -160,12 +166,21 @@ func (n *Node) ReplicateToFollower(id string) {
 				prevTerm = n.GetLogTerm(int(prevIndex))
 			}
 
+			var entries []*pb.LogEntry
+			for _, entry := range n.Log[startIndex:] {
+				serializedCommand, err := json.Marshal(entry.Command)
+				if err != nil {
+					log.Fatal(err)
+				}
+				entries = append(entries, &pb.LogEntry{Term: entry.Term, Command: serializedCommand})
+			}
+
 			req := pb.AppendRequest{
 				Term:         n.Term,
 				LeaderId:     n.Id,
 				PrevLogIndex: prevIndex,
 				PrevLogTerm:  prevTerm,
-				Entries:      n.Log[startIndex:],
+				Entries:      entries,
 			}
 
 			resp, _ := n.Clients[id].AppendEntries(context.Background(), &req)

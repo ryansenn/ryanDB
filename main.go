@@ -22,7 +22,6 @@ func get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	value = node.Get(key)
 	w.Write([]byte(value))
 }
 
@@ -31,11 +30,11 @@ func put(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Query().Get("key")
 	value := r.URL.Query().Get("value")
 
-	res := ""
+	res := "true"
 	if node.State == core.Follower {
 		res = node.ForwardToLeader(core.NewCommand("put", key, value))
 	} else {
-		res = node.Put(key, value)
+		node.AppendLog(core.NewLogEntry(node.Term, core.NewCommand("put", key, value)))
 	}
 
 	w.Write([]byte(res + "\n"))
