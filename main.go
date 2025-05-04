@@ -38,7 +38,7 @@ func put(w http.ResponseWriter, r *http.Request) {
 		res = node.Put(key, value)
 	}
 
-	w.Write([]byte(res))
+	w.Write([]byte(res + "\n"))
 }
 
 func parsePeers(peersStr string) map[string]string {

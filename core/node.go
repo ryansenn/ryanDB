@@ -105,7 +105,7 @@ func (n *Node) ForwardToLeader(command *Command) string {
 		log.Fatal(err)
 	}
 
-	log.Printf(n.Id + " has forwarded command to leader")
+	log.Printf(n.Id + " has forwarded command to leader " + n.LeaderId)
 	response, err := n.Clients[n.LeaderId].ForwardToLeader(context.Background(), &pb.Command{Command: serializedCommand})
 
 	if err != nil {
@@ -173,6 +173,7 @@ func (n *Node) ReplicateToFollower(id string) {
 			if prevIndex >= 0 && prevIndex < int64(len(n.Log)) {
 				prevTerm = n.GetLogTerm(int(prevIndex))
 			}
+
 			req := pb.AppendRequest{
 				Term:         n.Term,
 				LeaderId:     n.Id,
@@ -188,7 +189,9 @@ func (n *Node) ReplicateToFollower(id string) {
 				n.NextIndex[id] += added
 				n.MatchIndex[id] = n.NextIndex[id] - 1
 			} else {
-				n.NextIndex[id]--
+				if n.NextIndex[id] > 0 {
+					n.NextIndex[id]--
+				}
 			}
 		}
 
@@ -197,6 +200,14 @@ func (n *Node) ReplicateToFollower(id string) {
 }
 
 func (n *Node) StartReplicationWorkers() {
+	for key, _ := range n.MatchIndex {
+		n.MatchIndex[key] = 0
+	}
+
+	for key, _ := range n.NextIndex {
+		n.NextIndex[key] = int64(len(n.Log))
+	}
+
 	for id := range n.Peers {
 		go n.ReplicateToFollower(id)
 	}

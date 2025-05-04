@@ -65,7 +65,7 @@ func (n *Node) StartClients() {
 
 func (s *server) AppendEntries(ctx context.Context, req *pb.AppendRequest) (*pb.AppendResponse, error) {
 	s.node.ReceiveHeartbeat()
-
+	s.node.LeaderId = req.LeaderId
 	resp := pb.AppendResponse{Term: s.node.Term, Success: false}
 
 	if s.node.Term > req.Term {
@@ -86,7 +86,6 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendRequest) (*pb.
 	}
 
 	s.node.Log = s.node.Log[:req.PrevLogIndex+1]
-
 	s.node.Log = append(s.node.Log, req.Entries...)
 
 	resp.Success = true
@@ -122,6 +121,10 @@ func (s *server) RequestVote(ctx context.Context, req *pb.VoteRequest) (*pb.Vote
 }
 
 func (s *server) ForwardToLeader(ctx context.Context, command *pb.Command) (*pb.CommandResponse, error) {
+	if s.node.State != Leader {
+		return s.node.Clients[s.node.LeaderId].ForwardToLeader(context.Background(), command)
+	}
+
 	var cmd Command
 	var res pb.CommandResponse
 	res.Success = true
