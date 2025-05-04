@@ -32,7 +32,7 @@ type Node struct {
 	LastApplied int64
 	NextIndex   map[string]int64
 	MatchIndex  map[string]int64
-	Log         []*pb.LogEntry
+	Log         []*LogEntry
 
 	LeaderId           string
 	ResetElectionTimer chan struct{}
@@ -53,7 +53,7 @@ func NewNode(id, port string, peers map[string]string) *Node {
 		LastApplied:        0,
 		NextIndex:          make(map[string]int64),
 		MatchIndex:         make(map[string]int64),
-		Log:                make([]*pb.LogEntry, 0),
+		Log:                make([]*LogEntry, 0),
 		LeaderId:           "",
 		ResetElectionTimer: make(chan struct{}, 1),
 		Logger:             newLogger(id),
@@ -61,31 +61,17 @@ func NewNode(id, port string, peers map[string]string) *Node {
 	}
 }
 
-func (n *Node) Get(key string) string {
-	return ""
-}
-
-func (n *Node) Put(key string, value string) string {
-	command := NewCommand("put", key, value)
-	serializedCommand, err := json.Marshal(command)
-
-	if err != nil {
-		log.Fatal(err)
-		return "false"
-	}
-
-	entry := pb.LogEntry{Term: n.Term, Command: serializedCommand}
-	n.Logger.append(&entry)
-	n.Log = append(n.Log, &entry)
-
-	return "true"
-}
-
 func (n *Node) Init() {
 	log.Printf(n.Id + " has been initialized.")
 	n.StartServer()
 	n.StartClients()
 	n.StartElectionTimer()
+}
+
+func (n *Node) AppendLog(term int64, command *Command) {
+	entry := NewLogEntry(term, command)
+	n.Logger.append(entry)
+	n.Log = append(n.Log, entry)
 }
 
 func (n *Node) GetLogTerm(index int) int64 {

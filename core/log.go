@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"os"
-
-	pb "github.com/ryansenn/ryanDB/proto/nodepb"
 )
 
 type Command struct {
@@ -14,8 +12,17 @@ type Command struct {
 	Value string
 }
 
+type LogEntry struct {
+	Term    int64
+	Command Command
+}
+
 func NewCommand(op string, key string, value string) *Command {
 	return &Command{Op: op, Key: key, Value: value}
+}
+
+func NewLogEntry(term int64, command *Command) *LogEntry {
+	return &LogEntry{Term: term, Command: *command}
 }
 
 type Logger struct {
@@ -34,7 +41,7 @@ func newLogger(id string) *Logger {
 	return &Logger{file: f}
 }
 
-func (l *Logger) append(entry *pb.LogEntry) error {
+func (l *Logger) append(entry *LogEntry) error {
 	data, err := json.Marshal(entry)
 
 	if err != nil {
