@@ -42,6 +42,13 @@ func newLogger(id string) *Logger {
 		log.Fatal(err)
 	}
 
+	// Temporary clear file
+	err = f.Truncate(0)
+	if err != nil {
+		log.Fatal(err)
+	}
+	f.Seek(0, io.SeekStart)
+
 	return &Logger{file: f}
 }
 

@@ -89,7 +89,7 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendRequest) (*pb.
 
 	for _, entry := range req.Entries {
 		var cmd Command
-		json.Unmarshal(entry.Command, cmd)
+		json.Unmarshal(entry.Command, &cmd)
 		entries = append(entries, NewLogEntry(entry.Term, &cmd))
 	}
 

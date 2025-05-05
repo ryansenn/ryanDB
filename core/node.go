@@ -80,7 +80,7 @@ func (n *Node) AppendLogs(PrevLogIndex int64, entries []*LogEntry) {
 	n.Log = append(n.Log, entries...)
 
 	//persistent
-
+	n.Logger.AppendLogs(entries, PrevLogIndex+1)
 	log.Printf(n.Id+" has appended %d new log", len(entries))
 }
 
@@ -214,7 +214,9 @@ func (n *Node) StartReplicationWorkers() {
 	}
 
 	for id := range n.Peers {
-		go n.ReplicateToFollower(id)
+		if id != n.Id {
+			go n.ReplicateToFollower(id)
+		}
 	}
 }
 
