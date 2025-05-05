@@ -69,7 +69,7 @@ func (n *Node) Init() {
 }
 
 func (n *Node) AppendLog(entry *LogEntry) {
-	n.Logger.append(entry)
+	n.Logger.AppendLog(entry)
 	n.Log = append(n.Log, entry)
 	log.Printf(n.Id + " has appended 1 new log")
 }

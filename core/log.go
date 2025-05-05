@@ -29,8 +29,8 @@ func NewLogEntry(term int64, command *Command) *LogEntry {
 }
 
 type Logger struct {
-	file    *os.File
-	offsets []int64
+	file   *os.File
+	offset []int64
 }
 
 func newLogger(id string) *Logger {
@@ -45,7 +45,7 @@ func newLogger(id string) *Logger {
 	return &Logger{file: f}
 }
 
-func encoreLogEntry(entry *LogEntry) []byte {
+func encodeLogEntry(entry *LogEntry) []byte {
 	data, err := json.Marshal(entry)
 
 	if err != nil {
@@ -55,21 +55,39 @@ func encoreLogEntry(entry *LogEntry) []byte {
 	data = append(data, '\n')
 
 	var buf bytes.Buffer
-	binary.Write(&buf, binary.LittleEndian, uint32(len(data)))
+	size := uint32(len(data))
+	binary.Write(&buf, binary.LittleEndian, size)
 	buf.Write(data)
 	final := buf.Bytes()
 
 	return final
 }
 
-func (l *Logger) append(entry *LogEntry) error {
+func (l *Logger) AppendLog(entry *LogEntry) {
+	data := encodeLogEntry(entry)
 
-	data := encoreLogEntry(entry)
+	pos, err := l.file.Seek(0, io.SeekEnd)
 
-	l.file.Seek(0, io.SeekEnd)
-	if _, err := l.file.Write(data); err != nil {
-		return err
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	return l.file.Sync()
+	if _, err := l.file.Write(data); err != nil {
+		log.Fatal(err)
+	}
+
+	l.offset = append(l.offset, pos)
+}
+
+func (l *Logger) AppendLogs(entries []*LogEntry, start int64) {
+	if start < int64(len(l.offset)) {
+		err := l.file.Truncate(l.offset[start])
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	for _, entry := range entries {
+		l.AppendLog(entry)
+	}
 }
