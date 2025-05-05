@@ -71,13 +71,17 @@ func (n *Node) Init() {
 func (n *Node) AppendLog(entry *LogEntry) {
 	n.Logger.append(entry)
 	n.Log = append(n.Log, entry)
-
+	log.Printf(n.Id + " has appended 1 new log")
 }
 
 func (n *Node) AppendLogs(PrevLogIndex int64, entries []*LogEntry) {
-
+	// in memory
 	n.Log = n.Log[:PrevLogIndex+1]
 	n.Log = append(n.Log, entries...)
+
+	//persistent
+
+	log.Printf(n.Id+" has appended %d new log", len(entries))
 }
 
 func (n *Node) GetLogTerm(index int) int64 {

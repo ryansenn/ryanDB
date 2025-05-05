@@ -1,7 +1,10 @@
 package core
 
 import (
+	"bytes"
+	"encoding/binary"
 	"encoding/json"
+	"io"
 	"log"
 	"os"
 )
@@ -26,13 +29,14 @@ func NewLogEntry(term int64, command *Command) *LogEntry {
 }
 
 type Logger struct {
-	file *os.File
+	file    *os.File
+	offsets []int64
 }
 
 func newLogger(id string) *Logger {
 	os.MkdirAll("logs", 0755)
 	path := "logs/" + id + ".log"
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
 
 	if err != nil {
 		log.Fatal(err)
@@ -41,7 +45,7 @@ func newLogger(id string) *Logger {
 	return &Logger{file: f}
 }
 
-func (l *Logger) append(entry *LogEntry) error {
+func encoreLogEntry(entry *LogEntry) []byte {
 	data, err := json.Marshal(entry)
 
 	if err != nil {
@@ -50,6 +54,19 @@ func (l *Logger) append(entry *LogEntry) error {
 
 	data = append(data, '\n')
 
+	var buf bytes.Buffer
+	binary.Write(&buf, binary.LittleEndian, uint32(len(data)))
+	buf.Write(data)
+	final := buf.Bytes()
+
+	return final
+}
+
+func (l *Logger) append(entry *LogEntry) error {
+
+	data := encoreLogEntry(entry)
+
+	l.file.Seek(0, io.SeekEnd)
 	if _, err := l.file.Write(data); err != nil {
 		return err
 	}
