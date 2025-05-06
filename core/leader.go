@@ -13,11 +13,11 @@ func (n *Node) ReplicateToFollower(id string) {
 	for n.State == Leader {
 		startIndex := n.NextIndex[id]
 
-		if startIndex < int64(len(n.Log)) {
+		if startIndex < int64(n.GetLogSize()) {
 			prevIndex := int64(startIndex - 1)
 			prevTerm := int64(0)
 
-			if prevIndex >= 0 && prevIndex < int64(len(n.Log)) {
+			if prevIndex >= 0 && prevIndex < int64(n.GetLogSize()) {
 				prevTerm = n.GetLogTerm(int(prevIndex))
 			}
 
@@ -62,7 +62,7 @@ func (n *Node) StartReplicationWorkers() {
 	}
 
 	for key, _ := range n.NextIndex {
-		n.NextIndex[key] = int64(len(n.Log))
+		n.NextIndex[key] = int64(n.GetLogSize())
 	}
 
 	for id := range n.Peers {
@@ -92,7 +92,7 @@ func (n *Node) StartHeartbeat() {
 }
 
 func (n *Node) UpdateCommitIndex() {
-	for i := int64(len(n.Log)) - 1; i > n.CommitIndex; i-- {
+	for i := int64(n.GetLogSize()) - 1; i > n.CommitIndex; i-- {
 		if n.GetLogTerm(int(i)) != n.Term {
 			continue
 		}

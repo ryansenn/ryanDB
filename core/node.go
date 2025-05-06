@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"strconv"
+	"sync"
 	"time"
 
 	pb "github.com/ryansenn/ryanDB/proto/nodepb"
@@ -34,6 +35,7 @@ type Node struct {
 	NextIndex   map[string]int64
 	MatchIndex  map[string]int64
 	Log         []*LogEntry
+	LogMu       sync.Mutex
 
 	LeaderId           string
 	ResetElectionTimer chan struct{}
@@ -70,22 +72,34 @@ func (n *Node) Init() {
 }
 
 func (n *Node) AppendLog(entry *LogEntry) {
+	n.LogMu.Lock()
 	n.Logger.AppendLog(entry)
 	n.Log = append(n.Log, entry)
+	n.LogMu.Unlock()
 	log.Printf(n.Id + " has appended 1 new log")
 }
 
 func (n *Node) AppendLogs(PrevLogIndex int64, entries []*LogEntry) {
+	n.LogMu.Lock()
 	// in memory
 	n.Log = n.Log[:PrevLogIndex+1]
 	n.Log = append(n.Log, entries...)
 
 	//persistent
 	n.Logger.AppendLogs(entries, PrevLogIndex+1)
+	n.LogMu.Unlock()
 	log.Printf(n.Id+" has appended %d new log", len(entries))
 }
 
+func (n *Node) GetLogSize() int {
+	n.LogMu.Lock()
+	defer n.LogMu.Unlock()
+	return len(n.Log)
+}
+
 func (n *Node) GetLogTerm(index int) int64 {
+	n.LogMu.Lock()
+	defer n.LogMu.Unlock()
 	if index == -1 {
 		if len(n.Log) > 0 {
 			return n.Log[len(n.Log)-1].Term
@@ -126,7 +140,7 @@ func (n *Node) StartElectionTimer() {
 
 		case <-n.ResetElectionTimer:
 			if !timer.Stop() {
-				<-timer.C // drain to avoid race
+				<-timer.C //drain
 			}
 			timer.Reset(randTimeout())
 		}
