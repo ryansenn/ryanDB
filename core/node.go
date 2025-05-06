@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"strconv"
 
 	pb "github.com/ryansenn/ryanDB/proto/nodepb"
 	"github.com/ryansenn/ryanDB/storage"
@@ -106,7 +107,7 @@ func (n *Node) ForwardToLeader(command *Command) string {
 		log.Fatal(err)
 	}
 
-	return string(response.Result)
+	return strconv.FormatBool(response.Success)
 }
 
 func (n *Node) StartElection() {

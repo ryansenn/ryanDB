@@ -45,6 +45,7 @@ func (n *Node) ReplicateToFollower(id string) {
 				added := int64(len(req.Entries))
 				n.NextIndex[id] += added
 				n.MatchIndex[id] = n.NextIndex[id] - 1
+				n.UpdateCommitIndex()
 			} else {
 				if n.NextIndex[id] > 0 {
 					n.NextIndex[id]--
@@ -120,6 +121,7 @@ func (n *Node) UpdateCommitIndex() {
 
 		if count > len(n.MatchIndex)/2 {
 			n.CommitIndex = i
+			log.Printf(n.Id+" has updated commit index to %d", i)
 			return
 		}
 	}
