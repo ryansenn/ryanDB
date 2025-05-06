@@ -113,15 +113,22 @@ func (n *Node) ForwardToLeader(command *Command) string {
 }
 
 func (n *Node) StartElectionTimer() {
-	for {
-		timeout := rand.Intn(151) + 150
+	randTimeout := func() time.Duration {
+		return time.Duration(rand.Intn(151)+150) * time.Millisecond
+	}
+	timer := time.NewTimer(randTimeout())
 
+	for {
 		select {
-		case <-time.After(time.Duration(timeout) * time.Millisecond):
+		case <-timer.C:
 			n.StartElection()
+			timer.Reset(randTimeout())
 
 		case <-n.ResetElectionTimer:
-
+			if !timer.Stop() {
+				<-timer.C // drain to avoid race
+			}
+			timer.Reset(randTimeout())
 		}
 	}
 }
