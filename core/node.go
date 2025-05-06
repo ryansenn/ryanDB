@@ -155,3 +155,12 @@ func (n *Node) StartElection() {
 		log.Printf("%s becomes Follower for term %d", n.Id, n.Term)
 	}
 }
+
+func (n *Node) ReceiveHeartbeat() {
+	select {
+	case n.ResetElectionTimer <- struct{}{}:
+		// sent successfully
+	default:
+		// channel full, skip
+	}
+}
