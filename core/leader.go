@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"log"
-	"math/rand"
 	"time"
 
 	pb "github.com/ryansenn/ryanDB/proto/nodepb"
@@ -89,20 +88,6 @@ func (n *Node) StartHeartbeat() {
 		}
 
 		time.Sleep(50 * time.Microsecond)
-	}
-}
-
-func (n *Node) StartElectionTimer() {
-	for {
-		timeout := rand.Intn(151) + 150
-
-		select {
-		case <-time.After(time.Duration(timeout) * time.Millisecond):
-			n.StartElection()
-
-		case <-n.ResetElectionTimer:
-
-		}
 	}
 }
 

@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"math/rand"
 	"strconv"
+	"time"
 
 	pb "github.com/ryansenn/ryanDB/proto/nodepb"
 	"github.com/ryansenn/ryanDB/storage"
@@ -48,8 +50,8 @@ func NewNode(id, port string, peers map[string]string) *Node {
 		State:              Follower,
 		Term:               0,
 		VoteFor:            "",
-		CommitIndex:        0,
-		LastApplied:        0,
+		CommitIndex:        -1,
+		LastApplied:        -1,
 		NextIndex:          make(map[string]int64),
 		MatchIndex:         make(map[string]int64),
 		Log:                make([]*LogEntry, 0),
@@ -108,6 +110,20 @@ func (n *Node) ForwardToLeader(command *Command) string {
 	}
 
 	return strconv.FormatBool(response.Success)
+}
+
+func (n *Node) StartElectionTimer() {
+	for {
+		timeout := rand.Intn(151) + 150
+
+		select {
+		case <-time.After(time.Duration(timeout) * time.Millisecond):
+			n.StartElection()
+
+		case <-n.ResetElectionTimer:
+
+		}
+	}
 }
 
 func (n *Node) StartElection() {
