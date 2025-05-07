@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"log"
-	"sync/atomic"
 	"time"
 
 	pb "github.com/ryansenn/ryanDB/proto/nodepb"
@@ -77,7 +76,7 @@ func (n *Node) StartReplicationWorkers() {
 }
 
 func (n *Node) UpdateCommitIndex() {
-	for i := int64(n.GetLogSize()) - 1; i > n.CommitIndex; i-- {
+	for i := int64(n.GetLogSize()) - 1; i > n.CommitIndex.Load(); i-- {
 		if n.GetLogTerm(int(i)) != n.Term {
 			continue
 		}
@@ -91,7 +90,7 @@ func (n *Node) UpdateCommitIndex() {
 
 		if count > len(n.MatchIndex)/2 {
 			n.CommitCond.L.Lock()
-			atomic.StoreInt64(&n.CommitIndex, i)
+			n.CommitIndex.Store(i)
 			n.CommitCond.Broadcast()
 			n.CommitCond.L.Unlock()
 			log.Printf(n.Id+" has updated commit index to %d", i)

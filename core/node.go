@@ -31,7 +31,7 @@ type Node struct {
 
 	Term        int64
 	VoteFor     string
-	CommitIndex int64
+	CommitIndex atomic.Int64
 	LastApplied int64
 	NextIndex   map[string]int64
 	MatchIndex  map[string]int64
@@ -46,7 +46,7 @@ type Node struct {
 }
 
 func NewNode(id, port string, peers map[string]string) *Node {
-	return &Node{
+	n := &Node{
 		Id:                 id,
 		Port:               port,
 		Peers:              peers,
@@ -54,7 +54,6 @@ func NewNode(id, port string, peers map[string]string) *Node {
 		State:              Follower,
 		Term:               0,
 		VoteFor:            "",
-		CommitIndex:        -1,
 		LastApplied:        -1,
 		NextIndex:          make(map[string]int64),
 		MatchIndex:         make(map[string]int64),
@@ -65,6 +64,9 @@ func NewNode(id, port string, peers map[string]string) *Node {
 		Logger:             newLogger(id),
 		Storage:            storage.NewEngine(),
 	}
+	n.CommitIndex.Store(-1)
+
+	return n
 }
 
 func (n *Node) Init() {
@@ -86,7 +88,7 @@ func (n *Node) AppendLog(entry *LogEntry) int {
 func (n *Node) AppendLogWait(entry *LogEntry) {
 	index := int64(n.AppendLog(entry))
 	n.CommitCond.L.Lock()
-	for index > atomic.LoadInt64(&n.CommitIndex) {
+	for index > n.CommitIndex.Load() {
 		n.CommitCond.Wait()
 	}
 	n.CommitCond.L.Unlock()
