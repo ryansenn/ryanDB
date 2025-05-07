@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	pb "github.com/ryansenn/ryanDB/proto/nodepb"
@@ -36,6 +37,7 @@ type Node struct {
 	MatchIndex  map[string]int64
 	Log         []*LogEntry
 	LogMu       sync.Mutex
+	CommitCond  *sync.Cond
 
 	LeaderId           string
 	ResetElectionTimer chan struct{}
@@ -57,6 +59,7 @@ func NewNode(id, port string, peers map[string]string) *Node {
 		NextIndex:          make(map[string]int64),
 		MatchIndex:         make(map[string]int64),
 		Log:                make([]*LogEntry, 0),
+		CommitCond:         sync.NewCond(&sync.Mutex{}),
 		LeaderId:           "",
 		ResetElectionTimer: make(chan struct{}, 1),
 		Logger:             newLogger(id),
@@ -71,12 +74,22 @@ func (n *Node) Init() {
 	n.StartElectionTimer()
 }
 
-func (n *Node) AppendLog(entry *LogEntry) {
+func (n *Node) AppendLog(entry *LogEntry) int {
 	n.LogMu.Lock()
+	defer n.LogMu.Unlock()
 	n.Logger.AppendLog(entry)
 	n.Log = append(n.Log, entry)
-	n.LogMu.Unlock()
 	log.Printf(n.Id + " has appended 1 new log")
+	return len(n.Log) - 1
+}
+
+func (n *Node) AppendLogWait(entry *LogEntry) {
+	index := int64(n.AppendLog(entry))
+	n.CommitCond.L.Lock()
+	for index > atomic.LoadInt64(&n.CommitIndex) {
+		n.CommitCond.Wait()
+	}
+	n.CommitCond.L.Unlock()
 }
 
 func (n *Node) AppendLogs(PrevLogIndex int64, entries []*LogEntry) {
@@ -186,7 +199,6 @@ func (n *Node) StartElection() {
 
 	if yesVote > len(n.Peers)/2 {
 		n.State = Leader
-		go n.StartHeartbeat()
 		go n.StartReplicationWorkers()
 		log.Printf("%s becomes Leader for term %d", n.Id, n.Term)
 	} else {

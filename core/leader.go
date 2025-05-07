@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"sync/atomic"
 	"time"
 
 	pb "github.com/ryansenn/ryanDB/proto/nodepb"
@@ -89,7 +90,10 @@ func (n *Node) UpdateCommitIndex() {
 		}
 
 		if count > len(n.MatchIndex)/2 {
-			n.CommitIndex = i
+			n.CommitCond.L.Lock()
+			atomic.StoreInt64(&n.CommitIndex, i)
+			n.CommitCond.Broadcast()
+			n.CommitCond.L.Unlock()
 			log.Printf(n.Id+" has updated commit index to %d", i)
 			return
 		}
