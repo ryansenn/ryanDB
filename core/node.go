@@ -33,8 +33,8 @@ type Node struct {
 	VoteFor     string
 	CommitIndex atomic.Int64
 	LastApplied int64
-	NextIndex   map[string]int64
-	MatchIndex  map[string]int64
+	NextIndex   map[string]*atomic.Int64
+	MatchIndex  map[string]*atomic.Int64
 	Log         []*LogEntry
 	LogMu       sync.Mutex
 	CommitCond  *sync.Cond
@@ -55,8 +55,8 @@ func NewNode(id, port string, peers map[string]string) *Node {
 		Term:               0,
 		VoteFor:            "",
 		LastApplied:        -1,
-		NextIndex:          make(map[string]int64),
-		MatchIndex:         make(map[string]int64),
+		NextIndex:          make(map[string]*atomic.Int64),
+		MatchIndex:         make(map[string]*atomic.Int64),
 		Log:                make([]*LogEntry, 0),
 		CommitCond:         sync.NewCond(&sync.Mutex{}),
 		LeaderId:           "",
@@ -65,6 +65,11 @@ func NewNode(id, port string, peers map[string]string) *Node {
 		Storage:            storage.NewEngine(),
 	}
 	n.CommitIndex.Store(-1)
+
+	for key, _ := range n.Peers {
+		n.NextIndex[key] = &atomic.Int64{}
+		n.MatchIndex[key] = &atomic.Int64{}
+	}
 
 	return n
 }

@@ -11,7 +11,7 @@ import (
 
 func (n *Node) ReplicateToFollower(id string) {
 	for n.State == Leader {
-		startIndex := n.NextIndex[id]
+		startIndex := n.NextIndex[id].Load()
 		prevIndex := startIndex - 1
 		prevTerm := int64(0)
 		var snapshot []*LogEntry
@@ -46,12 +46,12 @@ func (n *Node) ReplicateToFollower(id string) {
 
 		if resp.Success {
 			added := int64(len(req.Entries))
-			n.NextIndex[id] += added
-			n.MatchIndex[id] = n.NextIndex[id] - 1
+			n.NextIndex[id].Add(added)
+			n.MatchIndex[id].Store(n.NextIndex[id].Load() - 1)
 			n.UpdateCommitIndex()
 		} else {
-			if n.NextIndex[id] > 0 {
-				n.NextIndex[id]--
+			if n.NextIndex[id].Load() > 0 {
+				n.NextIndex[id].Add(-1)
 			}
 		}
 
@@ -61,11 +61,11 @@ func (n *Node) ReplicateToFollower(id string) {
 
 func (n *Node) StartReplicationWorkers() {
 	for key, _ := range n.MatchIndex {
-		n.MatchIndex[key] = 0
+		n.MatchIndex[key].Store(0)
 	}
 
 	for key, _ := range n.NextIndex {
-		n.NextIndex[key] = int64(n.GetLogSize())
+		n.NextIndex[key].Store(int64(n.GetLogSize()))
 	}
 
 	for id := range n.Peers {
@@ -83,7 +83,7 @@ func (n *Node) UpdateCommitIndex() {
 		count := 1
 
 		for id, val := range n.MatchIndex {
-			if id != n.Id && val >= i {
+			if id != n.Id && val.Load() >= i {
 				count++
 			}
 		}
