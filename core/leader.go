@@ -14,43 +14,44 @@ func (n *Node) ReplicateToFollower(id string) {
 		startIndex := n.NextIndex[id]
 		prevIndex := startIndex - 1
 		prevTerm := int64(0)
+		var snapshot []*LogEntry
 		n.LogMu.Lock()
-		snapshot := append([]*LogEntry(nil), n.Log[startIndex:]...)
-		if prevIndex >= 0 && prevIndex < int64(len(n.Log)) {
-			prevTerm = int64(n.Log[prevIndex].Term)
+		if startIndex < int64(len(n.Log)) {
+			snapshot = append(snapshot, n.Log[startIndex:]...)
+			if prevIndex >= 0 && prevIndex < int64(len(n.Log)) {
+				prevTerm = int64(n.Log[prevIndex].Term)
+			}
 		}
 		n.LogMu.Unlock()
 
-		if len(snapshot) > 0 {
-			var entries []*pb.LogEntry
+		var entries []*pb.LogEntry
 
-			for _, entry := range snapshot {
-				serializedCommand, err := json.Marshal(entry.Command)
-				if err != nil {
-					log.Fatal(err)
-				}
-				entries = append(entries, &pb.LogEntry{Term: entry.Term, Command: serializedCommand})
+		for _, entry := range snapshot {
+			serializedCommand, err := json.Marshal(entry.Command)
+			if err != nil {
+				log.Fatal(err)
 			}
+			entries = append(entries, &pb.LogEntry{Term: entry.Term, Command: serializedCommand})
+		}
 
-			req := pb.AppendRequest{
-				Term:         n.Term,
-				LeaderId:     n.Id,
-				PrevLogIndex: prevIndex,
-				PrevLogTerm:  prevTerm,
-				Entries:      entries,
-			}
+		req := pb.AppendRequest{
+			Term:         n.Term,
+			LeaderId:     n.Id,
+			PrevLogIndex: prevIndex,
+			PrevLogTerm:  prevTerm,
+			Entries:      entries,
+		}
 
-			resp, _ := n.Clients[id].AppendEntries(context.Background(), &req)
+		resp, _ := n.Clients[id].AppendEntries(context.Background(), &req)
 
-			if resp.Success {
-				added := int64(len(req.Entries))
-				n.NextIndex[id] += added
-				n.MatchIndex[id] = n.NextIndex[id] - 1
-				n.UpdateCommitIndex()
-			} else {
-				if n.NextIndex[id] > 0 {
-					n.NextIndex[id]--
-				}
+		if resp.Success {
+			added := int64(len(req.Entries))
+			n.NextIndex[id] += added
+			n.MatchIndex[id] = n.NextIndex[id] - 1
+			n.UpdateCommitIndex()
+		} else {
+			if n.NextIndex[id] > 0 {
+				n.NextIndex[id]--
 			}
 		}
 
@@ -71,25 +72,6 @@ func (n *Node) StartReplicationWorkers() {
 		if id != n.Id {
 			go n.ReplicateToFollower(id)
 		}
-	}
-}
-
-func (n *Node) StartHeartbeat() {
-
-	for n.State == Leader {
-
-		for _, client := range n.Clients {
-			emptyEntries := pb.AppendRequest{
-				Term:         n.Term,
-				LeaderId:     n.Id,
-				PrevLogIndex: 0,
-				PrevLogTerm:  0,
-			}
-
-			client.AppendEntries(context.Background(), &emptyEntries)
-		}
-
-		time.Sleep(50 * time.Microsecond)
 	}
 }
 
