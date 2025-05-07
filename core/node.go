@@ -157,10 +157,11 @@ func (n *Node) StartElection() {
 
 	for id, client := range n.Clients {
 		if id != n.Id {
-			prevIndex := int64(len(n.Log) - 1)
+			LogSize := int64(n.GetLogSize())
+			prevIndex := int64(LogSize - 1)
 			prevTerm := int64(0)
 
-			if prevIndex >= 0 && prevIndex < int64(len(n.Log)) {
+			if prevIndex >= 0 && prevIndex < LogSize {
 				prevTerm = n.GetLogTerm(int(prevIndex))
 			}
 

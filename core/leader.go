@@ -12,17 +12,19 @@ import (
 func (n *Node) ReplicateToFollower(id string) {
 	for n.State == Leader {
 		startIndex := n.NextIndex[id]
+		prevIndex := startIndex - 1
+		prevTerm := int64(0)
+		n.LogMu.Lock()
+		snapshot := append([]*LogEntry(nil), n.Log[startIndex:]...)
+		if prevIndex >= 0 && prevIndex < int64(len(n.Log)) {
+			prevTerm = int64(n.Log[prevIndex].Term)
+		}
+		n.LogMu.Unlock()
 
-		if startIndex < int64(n.GetLogSize()) {
-			prevIndex := int64(startIndex - 1)
-			prevTerm := int64(0)
-
-			if prevIndex >= 0 && prevIndex < int64(n.GetLogSize()) {
-				prevTerm = n.GetLogTerm(int(prevIndex))
-			}
-
+		if len(snapshot) > 0 {
 			var entries []*pb.LogEntry
-			for _, entry := range n.Log[startIndex:] {
+
+			for _, entry := range snapshot {
 				serializedCommand, err := json.Marshal(entry.Command)
 				if err != nil {
 					log.Fatal(err)
