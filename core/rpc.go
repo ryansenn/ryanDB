@@ -64,20 +64,21 @@ func (n *Node) StartClients() {
 }
 
 func (s *server) AppendEntries(ctx context.Context, req *pb.AppendRequest) (*pb.AppendResponse, error) {
-	s.node.ReceiveHeartbeat()
-	s.node.LeaderId = req.LeaderId
 	resp := pb.AppendResponse{Term: s.node.Term, Success: false}
 
 	if s.node.Term > req.Term {
 		return &resp, nil
 	}
 
+	s.node.ReceiveHeartbeat()
+	s.node.LeaderId = req.LeaderId
+
 	if req.Term > s.node.Term {
 		s.node.Term = req.Term
 		s.node.State = Follower
 	}
 
-	if len(s.node.Log)-1 < int(req.PrevLogIndex) {
+	if s.node.GetLogSize()-1 < int(req.PrevLogIndex) {
 		return &resp, nil
 	}
 
@@ -93,7 +94,9 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendRequest) (*pb.
 		entries = append(entries, NewLogEntry(entry.Term, &cmd))
 	}
 
-	s.node.AppendLogs(req.PrevLogIndex, entries)
+	if len(entries) > 0 {
+		s.node.AppendLogs(req.PrevLogIndex, entries)
+	}
 
 	resp.Success = true
 	resp.Term = s.node.Term
@@ -143,7 +146,7 @@ func (s *server) ForwardToLeader(ctx context.Context, command *pb.Command) (*pb.
 		return &res, err
 	}
 
-	s.node.AppendLog(NewLogEntry(s.node.Term, NewCommand(cmd.Op, cmd.Key, cmd.Value)))
+	s.node.AppendLogWait(NewLogEntry(s.node.Term, NewCommand(cmd.Op, cmd.Key, cmd.Value)))
 
 	return &res, nil
 }

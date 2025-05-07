@@ -145,7 +145,7 @@ func (n *Node) StartElectionTimer() {
 	}
 	timer := time.NewTimer(randTimeout())
 
-	for {
+	for n.State == Follower {
 		select {
 		case <-timer.C:
 			n.StartElection()

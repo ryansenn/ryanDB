@@ -56,7 +56,7 @@ func (n *Node) ReplicateToFollower(id string) {
 			}
 		}
 
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 	}
 }
 
