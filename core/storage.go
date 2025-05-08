@@ -1,4 +1,4 @@
-package storage
+package core
 
 type Engine struct {
 	store map[string]string

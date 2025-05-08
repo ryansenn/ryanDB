@@ -127,7 +127,7 @@ func (s *server) RequestVote(ctx context.Context, req *pb.VoteRequest) (*pb.Vote
 
 	resp.VoteGranted = true
 	s.node.VoteFor = req.CandidateId
-	log.Printf("%s has granted vote to %s in term %d", s.node.Id, req.CandidateId, s.node.Term)
+	log.Printf("%s has granted vote to %s in term %d", s.node.Id, req.CandidateId, s.node.Term.Load())
 	return &resp, nil
 }
 

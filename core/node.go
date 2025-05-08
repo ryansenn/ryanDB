@@ -11,7 +11,6 @@ import (
 	"time"
 
 	pb "github.com/ryansenn/ryanDB/proto/nodepb"
-	"github.com/ryansenn/ryanDB/storage"
 )
 
 type NodeState int
@@ -33,16 +32,18 @@ type Node struct {
 	VoteFor     string
 	CommitIndex atomic.Int64
 	LastApplied int64
+	ApplyMu     sync.Mutex
 	NextIndex   map[string]*atomic.Int64
 	MatchIndex  map[string]*atomic.Int64
 	Log         []*LogEntry
 	LogMu       sync.Mutex
 	CommitCond  *sync.Cond
+	ApplyCond   *sync.Cond
 
 	LeaderId           string
 	ResetElectionTimer chan struct{}
 	Logger             *Logger
-	Storage            *storage.Engine
+	Storage            *Engine
 }
 
 func NewNode(id, port string, peers map[string]string) *Node {
@@ -58,10 +59,11 @@ func NewNode(id, port string, peers map[string]string) *Node {
 		MatchIndex:         make(map[string]*atomic.Int64),
 		Log:                make([]*LogEntry, 0),
 		CommitCond:         sync.NewCond(&sync.Mutex{}),
+		ApplyCond:          sync.NewCond(&sync.Mutex{}),
 		LeaderId:           "",
 		ResetElectionTimer: make(chan struct{}, 1),
 		Logger:             newLogger(id),
-		Storage:            storage.NewEngine(),
+		Storage:            NewEngine(),
 	}
 	n.CommitIndex.Store(-1)
 
@@ -90,15 +92,6 @@ func (n *Node) AppendLog(cmd *Command) int {
 	return len(n.Log) - 1
 }
 
-func (n *Node) Commit(cmd *Command) {
-	index := int64(n.AppendLog(cmd))
-	n.CommitCond.L.Lock()
-	for index > n.CommitIndex.Load() {
-		n.CommitCond.Wait()
-	}
-	n.CommitCond.L.Unlock()
-}
-
 func (n *Node) AppendLogs(PrevLogIndex int64, entries []*LogEntry) {
 	n.LogMu.Lock()
 	// in memory
@@ -109,6 +102,19 @@ func (n *Node) AppendLogs(PrevLogIndex int64, entries []*LogEntry) {
 	n.Logger.AppendLogs(entries, PrevLogIndex+1)
 	n.LogMu.Unlock()
 	log.Printf(n.Id+" has appended %d new log", len(entries))
+}
+
+func (n *Node) Commit(cmd *Command) {
+	index := int64(n.AppendLog(cmd))
+	n.CommitCond.L.Lock()
+	for index > n.CommitIndex.Load() {
+		n.CommitCond.Wait()
+	}
+	n.CommitCond.L.Unlock()
+}
+
+func (n *Node) Execute(cmd *Command) {
+
 }
 
 func (n *Node) GetLogSize() int {
@@ -207,10 +213,10 @@ func (n *Node) StartElection() {
 	if yesVote > len(n.Peers)/2 {
 		n.State = Leader
 		go n.StartReplicationWorkers()
-		log.Printf("%s becomes Leader for term %d", n.Id, n.Term)
+		log.Printf("%s becomes Leader for term %d", n.Id, n.Term.Load())
 	} else {
 		n.State = Follower
-		log.Printf("%s becomes Follower for term %d", n.Id, n.Term)
+		log.Printf("%s becomes Follower for term %d", n.Id, n.Term.Load())
 	}
 }
 

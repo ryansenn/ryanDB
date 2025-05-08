@@ -9,6 +9,22 @@ import (
 	pb "github.com/ryansenn/ryanDB/proto/nodepb"
 )
 
+func (n *Node) StartReplicationWorkers() {
+	for key, _ := range n.MatchIndex {
+		n.MatchIndex[key].Store(0)
+	}
+
+	for key, _ := range n.NextIndex {
+		n.NextIndex[key].Store(int64(n.GetLogSize()))
+	}
+
+	for id := range n.Peers {
+		if id != n.Id {
+			go n.ReplicateToFollower(id)
+		}
+	}
+}
+
 func (n *Node) ReplicateToFollower(id string) {
 	for n.State == Leader {
 		startIndex := n.NextIndex[id].Load()
@@ -61,22 +77,6 @@ func (n *Node) ReplicateToFollower(id string) {
 	}
 }
 
-func (n *Node) StartReplicationWorkers() {
-	for key, _ := range n.MatchIndex {
-		n.MatchIndex[key].Store(0)
-	}
-
-	for key, _ := range n.NextIndex {
-		n.NextIndex[key].Store(int64(n.GetLogSize()))
-	}
-
-	for id := range n.Peers {
-		if id != n.Id {
-			go n.ReplicateToFollower(id)
-		}
-	}
-}
-
 func (n *Node) UpdateCommitIndex() {
 	for i := int64(n.GetLogSize()) - 1; i > n.CommitIndex.Load(); i-- {
 		if n.GetLogTerm(int(i)) != n.Term.Load() {
@@ -90,13 +90,37 @@ func (n *Node) UpdateCommitIndex() {
 			}
 		}
 
-		if count > len(n.MatchIndex)/2 {
+		if i < n.CommitIndex.Load() && count > len(n.MatchIndex)/2 {
 			n.CommitCond.L.Lock()
 			n.CommitIndex.Store(i)
 			n.CommitCond.Broadcast()
 			n.CommitCond.L.Unlock()
 			log.Printf(n.Id+" has updated commit index to %d", i)
+			n.ApplyCommitted()
 			return
 		}
 	}
+}
+
+func (n *Node) ApplyCommitted() {
+	n.ApplyMu.Lock()
+
+	for i := n.LastApplied + 1; i <= n.CommitIndex.Load(); i++ {
+		n.ApplyLogEntry(i)
+		n.LastApplied = i
+	}
+
+	n.ApplyMu.Unlock()
+}
+
+func (n *Node) ApplyLogEntry(index int64) {
+	n.LogMu.Lock()
+	cmd := n.Log[index].Command
+	switch cmd.Op {
+	case "get":
+		n.Storage.Get(cmd.Key)
+	case "put":
+		n.Storage.Put(cmd.Key, cmd.Value)
+	}
+	n.LogMu.Unlock()
 }
