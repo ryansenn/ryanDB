@@ -80,7 +80,8 @@ func (n *Node) Init() {
 	n.StartElectionTimer()
 }
 
-func (n *Node) AppendLog(entry *LogEntry) int {
+func (n *Node) AppendLog(cmd *Command) int {
+	entry := NewLogEntry(n.Term.Load(), cmd)
 	n.LogMu.Lock()
 	defer n.LogMu.Unlock()
 	n.Logger.AppendLog(entry)
@@ -89,8 +90,8 @@ func (n *Node) AppendLog(entry *LogEntry) int {
 	return len(n.Log) - 1
 }
 
-func (n *Node) AppendLogWait(entry *LogEntry) {
-	index := int64(n.AppendLog(entry))
+func (n *Node) AppendLogWait(cmd *Command) {
+	index := int64(n.AppendLog(cmd))
 	n.CommitCond.L.Lock()
 	for index > n.CommitIndex.Load() {
 		n.CommitCond.Wait()

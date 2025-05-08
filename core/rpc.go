@@ -147,7 +147,7 @@ func (s *server) ForwardToLeader(ctx context.Context, command *pb.Command) (*pb.
 		return &res, err
 	}
 
-	s.node.AppendLogWait(NewLogEntry(s.node.Term.Load(), NewCommand(cmd.Op, cmd.Key, cmd.Value)))
+	s.node.AppendLogWait(NewCommand(cmd.Op, cmd.Key, cmd.Value))
 
 	return &res, nil
 }

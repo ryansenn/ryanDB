@@ -34,7 +34,7 @@ func put(w http.ResponseWriter, r *http.Request) {
 	if node.State == core.Follower {
 		res = node.ForwardToLeader(core.NewCommand("put", key, value))
 	} else {
-		node.AppendLog(core.NewLogEntry(node.Term, core.NewCommand("put", key, value)))
+		node.AppendLogWait(core.NewCommand("put", key, value))
 	}
 
 	w.Write([]byte(res + "\n"))
