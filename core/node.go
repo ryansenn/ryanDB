@@ -90,7 +90,7 @@ func (n *Node) AppendLog(cmd *Command) int {
 	return len(n.Log) - 1
 }
 
-func (n *Node) AppendLogWait(cmd *Command) {
+func (n *Node) Commit(cmd *Command) {
 	index := int64(n.AppendLog(cmd))
 	n.CommitCond.L.Lock()
 	for index > n.CommitIndex.Load() {

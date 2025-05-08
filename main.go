@@ -12,32 +12,43 @@ import (
 
 var node *core.Node
 
+func handle_get(cmd *core.Command) string {
+	var res string
+	if node.State == core.Follower {
+		res = node.ForwardToLeader(cmd)
+	} else {
+		res = node.Apply(cmd)
+	}
+
+	return res
+}
+
+func handle_put(cmd *core.Command) error {
+	if node.State == core.Follower {
+		node.ForwardToLeader(cmd)
+	} else {
+		node.Commit(cmd)
+	}
+	return nil
+}
+
 func get(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	key := r.URL.Query().Get("key")
-	var value string
-	if node.State == core.Follower {
-		value = node.ForwardToLeader(core.NewCommand("get", key, ""))
-		w.Write([]byte(value))
-		return
-	}
-
-	w.Write([]byte(value))
+	cmd := core.NewCommand("get", key, "")
+	w.Write([]byte(handle_get(cmd) + "\n"))
 }
 
 func put(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	key := r.URL.Query().Get("key")
 	value := r.URL.Query().Get("value")
+	cmd := core.NewCommand("put", key, value)
 
-	res := "true"
-	if node.State == core.Follower {
-		res = node.ForwardToLeader(core.NewCommand("put", key, value))
-	} else {
-		node.AppendLogWait(core.NewCommand("put", key, value))
+	if handle_put(cmd) != nil {
+		w.Write([]byte("error\n"))
 	}
-
-	w.Write([]byte(res + "\n"))
+	w.Write([]byte("success\n"))
 }
 
 func parsePeers(peersStr string) map[string]string {
