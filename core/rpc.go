@@ -99,6 +99,12 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendRequest) (*pb.
 		s.node.AppendLogs(req.PrevLogIndex, entries)
 	}
 
+	if req.LeaderCommit > s.node.CommitIndex.Load() {
+		s.node.CommitIndex.Store(req.LeaderCommit)
+		log.Printf(s.node.Id+" has updated commit index to %d", req.LeaderCommit)
+		s.node.ApplyCommitted()
+	}
+
 	resp.Success = true
 	resp.Term = s.node.Term.Load()
 	return &resp, nil
