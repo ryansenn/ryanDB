@@ -117,8 +117,6 @@ func (n *Node) ApplyLogEntry(index int64) {
 	n.LogMu.Lock()
 	cmd := n.Log[index].Command
 	switch cmd.Op {
-	case "get":
-		n.Storage.Get(cmd.Key)
 	case "put":
 		n.Storage.Put(cmd.Key, cmd.Value)
 	}

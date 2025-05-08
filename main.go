@@ -36,8 +36,7 @@ func execPut(cmd *core.Command) error {
 func get(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	key := r.URL.Query().Get("key")
-	cmd := core.NewCommand("get", key, "")
-	w.Write([]byte(execGet(cmd) + "\n"))
+	w.Write([]byte(node.Storage.Get(key) + "\n"))
 }
 
 func put(w http.ResponseWriter, r *http.Request) {
