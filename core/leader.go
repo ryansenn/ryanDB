@@ -35,7 +35,7 @@ func (n *Node) ReplicateToFollower(id string) {
 		}
 
 		req := pb.AppendRequest{
-			Term:         n.Term,
+			Term:         n.Term.Load(),
 			LeaderId:     n.Id,
 			PrevLogIndex: prevIndex,
 			PrevLogTerm:  prevTerm,
@@ -79,7 +79,7 @@ func (n *Node) StartReplicationWorkers() {
 
 func (n *Node) UpdateCommitIndex() {
 	for i := int64(n.GetLogSize()) - 1; i > n.CommitIndex.Load(); i-- {
-		if n.GetLogTerm(int(i)) != n.Term {
+		if n.GetLogTerm(int(i)) != n.Term.Load() {
 			continue
 		}
 		count := 1

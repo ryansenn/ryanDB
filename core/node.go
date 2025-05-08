@@ -29,7 +29,7 @@ type Node struct {
 	Clients map[string]pb.NodeClient
 	State   NodeState
 
-	Term        int64
+	Term        atomic.Int64
 	VoteFor     string
 	CommitIndex atomic.Int64
 	LastApplied int64
@@ -52,7 +52,6 @@ func NewNode(id, port string, peers map[string]string) *Node {
 		Peers:              peers,
 		Clients:            make(map[string]pb.NodeClient),
 		State:              Follower,
-		Term:               0,
 		VoteFor:            "",
 		LastApplied:        -1,
 		NextIndex:          make(map[string]*atomic.Int64),
@@ -168,12 +167,12 @@ func (n *Node) StartElectionTimer() {
 }
 
 func (n *Node) StartElection() {
-	n.Term += 1
+	n.Term.Add(1)
 	n.VoteFor = ""
 	n.State = Candidate
 	yesVote := 1
 
-	log.Printf("%s started election for term %d", n.Id, n.Term)
+	log.Printf("%s started election for term %d", n.Id, n.Term.Load())
 
 	for id, client := range n.Clients {
 		if id != n.Id {
@@ -186,7 +185,7 @@ func (n *Node) StartElection() {
 			}
 
 			voteReq := pb.VoteRequest{
-				Term:         n.Term,
+				Term:         n.Term.Load(),
 				CandidateId:  n.Id,
 				LastLogIndex: prevIndex,
 				LastLogTerm:  prevTerm,

@@ -64,17 +64,18 @@ func (n *Node) StartClients() {
 }
 
 func (s *server) AppendEntries(ctx context.Context, req *pb.AppendRequest) (*pb.AppendResponse, error) {
-	resp := pb.AppendResponse{Term: s.node.Term, Success: false}
+	term := s.node.Term.Load()
+	resp := pb.AppendResponse{Term: term, Success: false}
 
-	if s.node.Term > req.Term {
+	if s.node.Term.Load() > req.Term {
 		return &resp, nil
 	}
 
 	s.node.ReceiveHeartbeat()
 	s.node.LeaderId = req.LeaderId
 
-	if req.Term > s.node.Term {
-		s.node.Term = req.Term
+	if req.Term > term {
+		s.node.Term.Store(req.Term)
 		s.node.State = Follower
 	}
 
@@ -99,24 +100,24 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendRequest) (*pb.
 	}
 
 	resp.Success = true
-	resp.Term = s.node.Term
+	resp.Term = s.node.Term.Load()
 	return &resp, nil
 }
 
 func (s *server) RequestVote(ctx context.Context, req *pb.VoteRequest) (*pb.VoteResponse, error) {
-	if s.node.Term < req.Term {
+	if s.node.Term.Load() < req.Term {
 		s.node.State = Follower
-		s.node.Term = req.Term
+		s.node.Term.Store(req.Term)
 		s.node.VoteFor = ""
 	}
 
-	resp := pb.VoteResponse{Term: s.node.Term, VoteGranted: false}
+	resp := pb.VoteResponse{Term: s.node.Term.Load(), VoteGranted: false}
 
 	if s.node.VoteFor != "" && s.node.VoteFor != req.CandidateId {
 		return &resp, nil
 	}
 
-	if s.node.Term > req.Term {
+	if s.node.Term.Load() > req.Term {
 		return &resp, nil
 	}
 
@@ -146,7 +147,7 @@ func (s *server) ForwardToLeader(ctx context.Context, command *pb.Command) (*pb.
 		return &res, err
 	}
 
-	s.node.AppendLogWait(NewLogEntry(s.node.Term, NewCommand(cmd.Op, cmd.Key, cmd.Value)))
+	s.node.AppendLogWait(NewLogEntry(s.node.Term.Load(), NewCommand(cmd.Op, cmd.Key, cmd.Value)))
 
 	return &res, nil
 }
