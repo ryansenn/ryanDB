@@ -44,14 +44,16 @@ func (n *Node) ReplicateToFollower(id string) {
 
 		resp, _ := n.Clients[id].AppendEntries(context.Background(), &req)
 
-		if resp.Success {
-			added := int64(len(req.Entries))
-			n.NextIndex[id].Add(added)
-			n.MatchIndex[id].Store(n.NextIndex[id].Load() - 1)
-			n.UpdateCommitIndex()
-		} else {
-			if n.NextIndex[id].Load() > 0 {
-				n.NextIndex[id].Add(-1)
+		if len(entries) > 0 {
+			if resp.Success {
+				added := int64(len(req.Entries))
+				n.NextIndex[id].Add(added)
+				n.MatchIndex[id].Store(n.NextIndex[id].Load() - 1)
+				n.UpdateCommitIndex()
+			} else {
+				if n.NextIndex[id].Load() > 0 {
+					n.NextIndex[id].Add(-1)
+				}
 			}
 		}
 
