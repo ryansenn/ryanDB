@@ -1,7 +1,11 @@
 package test
 
 import (
+	"encoding/json"
+	"fmt"
 	"io"
+	"net/http"
+	"net/url"
 	"os/exec"
 	"strconv"
 	"testing"
@@ -13,6 +17,78 @@ type Node struct {
 	port  string
 	peers string
 	cmd   *exec.Cmd
+}
+
+type Status struct {
+	id       string `json:"id"`
+	leaderId string `json:"leaderId"`
+	state    int    `json:"state"`
+	term     int    `json:"term"`
+}
+
+func (n *Node) status(t *testing.T) *Status {
+	url := fmt.Sprintf("http://localhost:%s/status", n.port)
+	resp, err := http.Get(url)
+
+	if err != nil {
+		t.Fatalf("HTTP request failed for %s: %v", n.id, err)
+	}
+
+	defer resp.Body.Close()
+
+	var status Status
+	if err := json.NewDecoder(resp.Body).Decode(&status); err != nil {
+		t.Fatalf("invalid JSON from %s: %v", n.id, err)
+	}
+
+	return &status
+}
+
+func (n *Node) get(t *testing.T, key string) string {
+	baseURL := fmt.Sprintf("http://localhost:%s/get", n.port)
+	params := url.Values{}
+	params.Add("key", key)
+
+	fullURL := baseURL + "?" + params.Encode()
+
+	resp, err := http.Get(fullURL)
+
+	if err != nil {
+		t.Fatalf("HTTP request failed for %s: %v", n.id, err)
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("invalid string from %s: %v", n.id, err)
+	}
+
+	return string(body)
+}
+
+func (n *Node) put(t *testing.T, key string, value string) string {
+	baseURL := fmt.Sprintf("http://localhost:%s/put", n.port)
+	params := url.Values{}
+	params.Add("key", key)
+	params.Add("value", value)
+
+	fullURL := baseURL + "?" + params.Encode()
+
+	resp, err := http.Get(fullURL)
+
+	if err != nil {
+		t.Fatalf("HTTP request failed for %s: %v", n.id, err)
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("invalid string from %s: %v", n.id, err)
+	}
+
+	return string(body)
 }
 
 func NewNodes(n int) []*Node {
