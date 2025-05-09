@@ -84,6 +84,7 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendRequest) (*pb.
 	}
 
 	if s.node.GetLogTerm(int(req.PrevLogIndex)) != req.PrevLogTerm {
+		log.Printf("mine %d them %d", s.node.GetLogTerm(int(req.PrevLogIndex)), req.PrevLogTerm)
 		return &resp, nil
 	}
 

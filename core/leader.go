@@ -34,9 +34,9 @@ func (n *Node) ReplicateToFollower(id string) {
 		n.LogMu.Lock()
 		if startIndex < int64(len(n.Log)) {
 			snapshot = append(snapshot, n.Log[startIndex:]...)
-			if prevIndex >= 0 && prevIndex < int64(len(n.Log)) {
-				prevTerm = int64(n.Log[prevIndex].Term)
-			}
+		}
+		if prevIndex >= 0 && prevIndex < int64(len(n.Log)) {
+			prevTerm = int64(n.Log[prevIndex].Term)
 		}
 		n.LogMu.Unlock()
 
@@ -56,6 +56,7 @@ func (n *Node) ReplicateToFollower(id string) {
 			PrevLogIndex: prevIndex,
 			PrevLogTerm:  prevTerm,
 			Entries:      entries,
+			LeaderCommit: n.CommitIndex.Load(),
 		}
 
 		resp, _ := n.Clients[id].AppendEntries(context.Background(), &req)
@@ -90,7 +91,7 @@ func (n *Node) UpdateCommitIndex() {
 			}
 		}
 
-		if i < n.CommitIndex.Load() && count > len(n.MatchIndex)/2 {
+		if i > n.CommitIndex.Load() && count > len(n.MatchIndex)/2 {
 			n.CommitCond.L.Lock()
 			n.CommitIndex.Store(i)
 			n.CommitCond.Broadcast()
