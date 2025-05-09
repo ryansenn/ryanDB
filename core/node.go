@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"log"
 	"math/rand"
-	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -177,7 +176,7 @@ func (n *Node) ForwardToLeader(command *Command) string {
 		log.Fatal(err)
 	}
 
-	return strconv.FormatBool(response.Success)
+	return string(response.Result)
 }
 
 func (n *Node) StartElectionTimer() {

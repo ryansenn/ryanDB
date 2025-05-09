@@ -153,7 +153,7 @@ func (s *server) ForwardToLeader(ctx context.Context, command *pb.Command) (*pb.
 		return &res, err
 	}
 
-	s.node.HandleCommand(NewCommand(cmd.Op, cmd.Key, cmd.Value))
+	res.Result = []byte(s.node.HandleCommand(NewCommand(cmd.Op, cmd.Key, cmd.Value)))
 
 	return &res, nil
 }

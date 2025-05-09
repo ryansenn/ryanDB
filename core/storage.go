@@ -14,7 +14,13 @@ func NewEngine() *Engine {
 func (e *Engine) Get(key string) string {
 	e.muStore.Lock()
 	defer e.muStore.Unlock()
-	return e.store[key]
+	val, ok := e.store[key]
+
+	if !ok {
+		return "key not found"
+	}
+
+	return val
 }
 
 func (e *Engine) Put(key string, value string) {

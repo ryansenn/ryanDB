@@ -15,7 +15,7 @@ var node *core.Node
 func get(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	key := r.URL.Query().Get("key")
-	cmd := core.NewCommand("put", key, "")
+	cmd := core.NewCommand("get", key, "")
 	w.Write([]byte(node.HandleCommand(cmd) + "\n"))
 }
 
@@ -24,8 +24,7 @@ func put(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Query().Get("key")
 	value := r.URL.Query().Get("value")
 	cmd := core.NewCommand("put", key, value)
-	node.HandleCommand(cmd)
-	w.Write([]byte("success\n"))
+	w.Write([]byte(node.HandleCommand(cmd) + "\n"))
 }
 
 func parsePeers(peersStr string) map[string]string {
