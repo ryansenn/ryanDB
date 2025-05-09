@@ -40,17 +40,33 @@ func NewNodes(n int) []*Node {
 }
 
 func (n *Node) StartNode(t *testing.T) {
-	id := n.id
-	port := n.port
-	peers := n.peers
-	cmd := exec.Command("go", "run", "../main.go", "--id="+id, "--port="+port, "--peers="+peers)
+	cmd := exec.Command("go", "run", "../main.go", "--id="+n.id, "--port="+n.port, "--peers="+n.peers)
 	stdout, _ := cmd.StdoutPipe()
 	stderr, _ := cmd.StderrPipe()
 	if err := cmd.Start(); err != nil {
-		t.Fatalf("failed to start node %s: %v", id, err)
+		t.Fatalf("failed to start node %s: %v", n.id, err)
 	}
 	go io.Copy(io.Discard, stdout)
 	go io.Copy(io.Discard, stderr)
-	time.Sleep(2 * time.Second) // wait for node startup
+	time.Sleep(2 * time.Second)
 	n.cmd = cmd
+}
+
+func (n *Node) StopNode() {
+	if n.cmd != nil && n.cmd.Process != nil {
+		_ = n.cmd.Process.Kill()
+		_ = n.cmd.Wait()
+	}
+}
+
+func StartNodes(t *testing.T, nodes []*Node) {
+	for _, node := range nodes {
+		node.StartNode(t)
+	}
+}
+
+func StopNodes(nodes []*Node) {
+	for _, node := range nodes {
+		node.StopNode()
+	}
 }
