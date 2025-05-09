@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"os/exec"
 	"strconv"
 	"testing"
@@ -20,13 +21,13 @@ type Node struct {
 }
 
 type Status struct {
-	id       string `json:"id"`
-	leaderId string `json:"leaderId"`
-	state    int    `json:"state"`
-	term     int    `json:"term"`
+	Id       string `json:"id"`
+	LeaderId string `json:"leaderId"`
+	State    int    `json:"state"`
+	Term     int    `json:"term"`
 }
 
-func (n *Node) status(t *testing.T) *Status {
+func (n *Node) Status(t *testing.T) *Status {
 	url := fmt.Sprintf("http://localhost:%s/status", n.port)
 	resp, err := http.Get(url)
 
@@ -44,7 +45,7 @@ func (n *Node) status(t *testing.T) *Status {
 	return &status
 }
 
-func (n *Node) get(t *testing.T, key string) string {
+func (n *Node) Get(t *testing.T, key string) string {
 	baseURL := fmt.Sprintf("http://localhost:%s/get", n.port)
 	params := url.Values{}
 	params.Add("key", key)
@@ -67,7 +68,7 @@ func (n *Node) get(t *testing.T, key string) string {
 	return string(body)
 }
 
-func (n *Node) put(t *testing.T, key string, value string) string {
+func (n *Node) Put(t *testing.T, key string, value string) string {
 	baseURL := fmt.Sprintf("http://localhost:%s/put", n.port)
 	params := url.Values{}
 	params.Add("key", key)
@@ -116,14 +117,17 @@ func NewNodes(n int) []*Node {
 }
 
 func (n *Node) StartNode(t *testing.T) {
-	cmd := exec.Command("go", "run", "../main.go", "--id="+n.id, "--port="+n.port, "--peers="+n.peers)
-	stdout, _ := cmd.StdoutPipe()
-	stderr, _ := cmd.StderrPipe()
+	cmd := exec.Command("../raftnode", "--id="+n.id, "--port="+n.port, "--peers="+n.peers)
+	//stdout, _ := cmd.StdoutPipe()
+	//stderr, _ := cmd.StderrPipe()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("failed to start node %s: %v", n.id, err)
 	}
-	go io.Copy(io.Discard, stdout)
-	go io.Copy(io.Discard, stderr)
+
+	//go io.Copy(io.Discard, stdout)
+	//go io.Copy(io.Discard, stderr)
 	time.Sleep(2 * time.Second)
 	n.cmd = cmd
 }
