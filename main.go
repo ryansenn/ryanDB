@@ -17,8 +17,7 @@ func execGet(cmd *core.Command) string {
 	if node.State == core.Follower {
 		res = node.ForwardToLeader(cmd)
 	} else {
-		//res = node.Apply(cmd)
-		res = "h"
+		res = node.Get(cmd.Key)
 	}
 
 	return res
@@ -36,7 +35,8 @@ func execPut(cmd *core.Command) error {
 func get(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	key := r.URL.Query().Get("key")
-	w.Write([]byte(node.Storage.Get(key) + "\n"))
+	cmd := core.NewCommand("put", key, "")
+	w.Write([]byte(execGet(cmd) + "\n"))
 }
 
 func put(w http.ResponseWriter, r *http.Request) {

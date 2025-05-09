@@ -31,7 +31,7 @@ type Node struct {
 	Term        atomic.Int64
 	VoteFor     string
 	CommitIndex atomic.Int64
-	LastApplied int64
+	LastApplied atomic.Int64
 	ApplyMu     sync.Mutex
 	NextIndex   map[string]*atomic.Int64
 	MatchIndex  map[string]*atomic.Int64
@@ -54,7 +54,6 @@ func NewNode(id, port string, peers map[string]string) *Node {
 		Clients:            make(map[string]pb.NodeClient),
 		State:              Follower,
 		VoteFor:            "",
-		LastApplied:        -1,
 		NextIndex:          make(map[string]*atomic.Int64),
 		MatchIndex:         make(map[string]*atomic.Int64),
 		Log:                make([]*LogEntry, 0),
@@ -66,6 +65,7 @@ func NewNode(id, port string, peers map[string]string) *Node {
 		Storage:            NewEngine(),
 	}
 	n.CommitIndex.Store(-1)
+	n.LastApplied.Store(-1)
 
 	for key, _ := range n.Peers {
 		n.NextIndex[key] = &atomic.Int64{}
@@ -111,6 +111,18 @@ func (n *Node) Commit(cmd *Command) {
 		n.CommitCond.Wait()
 	}
 	n.CommitCond.L.Unlock()
+}
+
+// Provide linearizable reads
+func (n *Node) Get(key string) string {
+	readIndex := n.CommitIndex.Load()
+
+	n.ApplyCond.L.Lock()
+	for n.LastApplied.Load() < readIndex {
+		n.ApplyCond.Wait()
+	}
+	n.ApplyCond.L.Unlock()
+	return n.Storage.Get(key)
 }
 
 func (n *Node) Execute(cmd *Command) {
