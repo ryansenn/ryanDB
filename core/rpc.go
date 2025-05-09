@@ -84,7 +84,6 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendRequest) (*pb.
 	}
 
 	if s.node.GetLogTerm(int(req.PrevLogIndex)) != req.PrevLogTerm {
-		log.Printf("mine %d them %d", s.node.GetLogTerm(int(req.PrevLogIndex)), req.PrevLogTerm)
 		return &resp, nil
 	}
 
@@ -154,7 +153,7 @@ func (s *server) ForwardToLeader(ctx context.Context, command *pb.Command) (*pb.
 		return &res, err
 	}
 
-	s.node.Commit(NewCommand(cmd.Op, cmd.Key, cmd.Value))
+	s.node.HandleCommand(NewCommand(cmd.Op, cmd.Key, cmd.Value))
 
 	return &res, nil
 }

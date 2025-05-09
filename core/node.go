@@ -82,6 +82,22 @@ func (n *Node) Init() {
 	n.StartElectionTimer()
 }
 
+func (n *Node) HandleCommand(cmd *Command) string {
+	if n.State == Follower {
+		return n.ForwardToLeader(cmd)
+	}
+
+	switch cmd.Op {
+	case "get":
+		return n.Get(cmd.Key)
+	case "put":
+		n.Commit(cmd)
+		return "success"
+	}
+
+	return "unknown command"
+}
+
 func (n *Node) AppendLog(cmd *Command) int {
 	entry := NewLogEntry(n.Term.Load(), cmd)
 	n.LogMu.Lock()

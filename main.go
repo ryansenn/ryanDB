@@ -12,31 +12,11 @@ import (
 
 var node *core.Node
 
-func execGet(cmd *core.Command) string {
-	var res string
-	if node.State == core.Follower {
-		res = node.ForwardToLeader(cmd)
-	} else {
-		res = node.Get(cmd.Key)
-	}
-
-	return res
-}
-
-func execPut(cmd *core.Command) error {
-	if node.State == core.Follower {
-		node.ForwardToLeader(cmd)
-	} else {
-		node.Commit(cmd)
-	}
-	return nil
-}
-
 func get(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	key := r.URL.Query().Get("key")
 	cmd := core.NewCommand("put", key, "")
-	w.Write([]byte(execGet(cmd) + "\n"))
+	w.Write([]byte(node.HandleCommand(cmd) + "\n"))
 }
 
 func put(w http.ResponseWriter, r *http.Request) {
@@ -44,10 +24,7 @@ func put(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Query().Get("key")
 	value := r.URL.Query().Get("value")
 	cmd := core.NewCommand("put", key, value)
-
-	if execPut(cmd) != nil {
-		w.Write([]byte("error\n"))
-	}
+	node.HandleCommand(cmd)
 	w.Write([]byte("success\n"))
 }
 
