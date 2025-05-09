@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -27,15 +28,14 @@ func put(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(node.HandleCommand(cmd) + "\n"))
 }
 
-func parsePeers(peersStr string) map[string]string {
-	res := map[string]string{}
-
-	for _, pair := range strings.Split(peersStr, ",") {
-		kv := strings.Split(pair, "=")
-		res[kv[0]] = kv[1]
-	}
-
-	return res
+func status(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"id":       node.Id,
+		"state":    node.State, // 0-Follower, 1-Candidate, 2-Leader
+		"term":     node.Term.Load(),
+		"leaderId": node.LeaderId,
+	})
 }
 
 func main() {
@@ -55,7 +55,19 @@ func main() {
 
 	http.HandleFunc("/get", get)
 	http.HandleFunc("/put", put)
+	http.HandleFunc("/status", status)
 
 	//log.Printf("Server ID: %s | Listening on: %s | Peers: %s", *id, *port, *peersStr)
 	log.Fatal(http.ListenAndServe(":"+*port, nil))
+}
+
+func parsePeers(peersStr string) map[string]string {
+	res := map[string]string{}
+
+	for _, pair := range strings.Split(peersStr, ",") {
+		kv := strings.Split(pair, "=")
+		res[kv[0]] = kv[1]
+	}
+
+	return res
 }
