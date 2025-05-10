@@ -128,7 +128,6 @@ func (n *Node) StartNode(t *testing.T) {
 
 	//go io.Copy(io.Discard, stdout)
 	//go io.Copy(io.Discard, stderr)
-	time.Sleep(2 * time.Second)
 	n.cmd = cmd
 }
 
@@ -143,6 +142,7 @@ func StartNodes(t *testing.T, nodes []*Node) {
 	for _, node := range nodes {
 		node.StartNode(t)
 	}
+	time.Sleep(10 * time.Second)
 }
 
 func StopNodes(nodes []*Node) {

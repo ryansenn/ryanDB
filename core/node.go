@@ -228,7 +228,7 @@ func (n *Node) StartElection() {
 			voteResp, err := client.RequestVote(context.Background(), &voteReq)
 
 			if err != nil {
-				log.Fatal(err)
+				log.Print(err)
 			}
 
 			if voteResp.VoteGranted {
