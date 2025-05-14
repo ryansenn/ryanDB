@@ -1,6 +1,8 @@
 package test
 
 import (
+	"fmt"
+	"math/rand"
 	"testing"
 	"time"
 )
@@ -40,5 +42,32 @@ func TestLogReplication(t *testing.T) {
 		if val != "value1" {
 			t.Fatalf("%s has wrong value: %s", node.id, val)
 		}
+	}
+}
+
+func Test1KLogReplication(t *testing.T) {
+	nodes := NewNodes(5)
+	defer StopNodes(nodes)
+	StartNodes(t, nodes)
+	time.Sleep(1 * time.Second)
+
+	for i := 1; i < 1000; i++ {
+		key := fmt.Sprintf("key%d", i)
+		value := fmt.Sprintf("value%d", i)
+		nodes[rand.Intn(len(nodes))].Put(t, key, value)
+	}
+
+	for _, node := range nodes {
+		for i := 1; i < 1000; i++ {
+			key := fmt.Sprintf("key%d", i)
+			expectedValue := fmt.Sprintf("value%d", i)
+			value := node.Get(t, key)
+
+			//t.Logf("%s returned raw: [%s]\n", node.id, val)
+			if value != expectedValue {
+				t.Fatalf("%s has wrong value: %s", node.id, value)
+			}
+		}
+
 	}
 }
