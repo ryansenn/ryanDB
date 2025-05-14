@@ -45,7 +45,7 @@ func (n *Node) ReplicateToFollower(id string) {
 		for _, entry := range snapshot {
 			serializedCommand, err := json.Marshal(entry.Command)
 			if err != nil {
-				log.Fatal(err)
+				log.Print(err)
 			}
 			entries = append(entries, &pb.LogEntry{Term: entry.Term, Command: serializedCommand})
 		}
@@ -74,7 +74,7 @@ func (n *Node) ReplicateToFollower(id string) {
 			}
 		}
 
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(20 * time.Millisecond)
 	}
 }
 

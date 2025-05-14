@@ -14,10 +14,11 @@ import (
 )
 
 type Node struct {
-	id    string
-	port  string
-	peers string
-	cmd   *exec.Cmd
+	id      string
+	port    string
+	peers   string
+	cmd     *exec.Cmd
+	running bool
 }
 
 type Status struct {
@@ -106,9 +107,10 @@ func NewNodes(n int) []*Node {
 
 	for i := 0; i < n; i++ {
 		node := &Node{
-			id:    "node" + strconv.Itoa(i+1),
-			port:  strconv.Itoa(8001 + i),
-			peers: peers,
+			id:      "node" + strconv.Itoa(i+1),
+			port:    strconv.Itoa(8001 + i),
+			peers:   peers,
+			running: false,
 		}
 		nodes = append(nodes, node)
 	}
@@ -125,6 +127,7 @@ func (n *Node) StartNode(t *testing.T) {
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("failed to start node %s: %v", n.id, err)
 	}
+	n.running = true
 
 	//go io.Copy(io.Discard, stdout)
 	//go io.Copy(io.Discard, stderr)
@@ -134,6 +137,7 @@ func (n *Node) StartNode(t *testing.T) {
 func (n *Node) StopNode() {
 	if n.cmd != nil && n.cmd.Process != nil {
 		_ = n.cmd.Process.Kill()
+		n.running = false
 		_ = n.cmd.Wait()
 	}
 }
@@ -149,4 +153,21 @@ func StopNodes(nodes []*Node) {
 	for _, node := range nodes {
 		node.StopNode()
 	}
+}
+
+func CountLeader(t *testing.T, nodes []*Node) (*Node, int) {
+	leaderCount := 0
+	var leader *Node
+
+	for _, node := range nodes {
+		if node.running {
+			status := node.Status(t)
+			if status.State == 2 {
+				leaderCount += 1
+				leader = node
+			}
+		}
+	}
+
+	return leader, leaderCount
 }

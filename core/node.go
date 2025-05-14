@@ -166,14 +166,14 @@ func (n *Node) GetLogTerm(index int) int64 {
 func (n *Node) ForwardToLeader(command *Command) string {
 	serializedCommand, err := json.Marshal(*command)
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
 	}
 
 	log.Printf(n.Id + " has forwarded command to leader " + n.LeaderId)
 	response, err := n.Clients[n.LeaderId].ForwardToLeader(context.Background(), &pb.Command{Command: serializedCommand})
 
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
 	}
 
 	return string(response.Result)
@@ -185,10 +185,12 @@ func (n *Node) StartElectionTimer() {
 	}
 	timer := time.NewTimer(randTimeout())
 
-	for n.State == Follower {
+	for {
 		select {
 		case <-timer.C:
-			n.StartElection()
+			if n.State == Follower {
+				n.StartElection()
+			}
 			timer.Reset(randTimeout())
 
 		case <-n.ResetElectionTimer:
@@ -201,8 +203,8 @@ func (n *Node) StartElectionTimer() {
 }
 
 func (n *Node) StartElection() {
+	n.VoteFor = n.Id
 	n.Term.Add(1)
-	n.VoteFor = ""
 	n.State = Candidate
 	yesVote := 1
 
@@ -229,6 +231,7 @@ func (n *Node) StartElection() {
 
 			if err != nil {
 				log.Print(err)
+				continue
 			}
 
 			if voteResp.VoteGranted {

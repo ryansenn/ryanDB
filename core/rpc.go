@@ -100,7 +100,7 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendRequest) (*pb.
 	}
 
 	if req.LeaderCommit > s.node.CommitIndex.Load() {
-		s.node.CommitIndex.Store(req.LeaderCommit)
+		s.node.CommitIndex.Store(min(req.LeaderCommit, int64(s.node.GetLogSize()-1)))
 		log.Printf(s.node.Id+" has updated commit index to %d", req.LeaderCommit)
 		s.node.ApplyCommitted()
 	}
@@ -112,6 +112,7 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendRequest) (*pb.
 
 func (s *server) RequestVote(ctx context.Context, req *pb.VoteRequest) (*pb.VoteResponse, error) {
 	if s.node.Term.Load() < req.Term {
+		s.node.ReceiveHeartbeat()
 		s.node.State = Follower
 		s.node.Term.Store(req.Term)
 		s.node.VoteFor = ""
@@ -133,6 +134,7 @@ func (s *server) RequestVote(ctx context.Context, req *pb.VoteRequest) (*pb.Vote
 
 	resp.VoteGranted = true
 	s.node.VoteFor = req.CandidateId
+	s.node.ReceiveHeartbeat()
 	log.Printf("%s has granted vote to %s in term %d", s.node.Id, req.CandidateId, s.node.Term.Load())
 	return &resp, nil
 }
