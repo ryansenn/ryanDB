@@ -17,7 +17,7 @@ func get(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	key := r.URL.Query().Get("key")
 	cmd := core.NewCommand("get", key, "")
-	w.Write([]byte(node.HandleCommand(cmd) + "\n"))
+	w.Write([]byte(node.HandleCommand(cmd)))
 }
 
 func put(w http.ResponseWriter, r *http.Request) {
@@ -25,7 +25,7 @@ func put(w http.ResponseWriter, r *http.Request) {
 	key := r.URL.Query().Get("key")
 	value := r.URL.Query().Get("value")
 	cmd := core.NewCommand("put", key, value)
-	w.Write([]byte(node.HandleCommand(cmd) + "\n"))
+	w.Write([]byte(node.HandleCommand(cmd)))
 }
 
 func status(w http.ResponseWriter, r *http.Request) {
