@@ -7,8 +7,11 @@ import (
 	"time"
 )
 
+var N = 5
+
 func TestElection(t *testing.T) {
-	nodes := NewNodes(5)
+	KillPorts(N)
+	nodes := NewNodes(N)
 	defer StopNodes(nodes)
 	StartNodes(t, nodes)
 	time.Sleep(1 * time.Second)
@@ -29,7 +32,8 @@ func TestElection(t *testing.T) {
 }
 
 func TestLogReplication(t *testing.T) {
-	nodes := NewNodes(5)
+	KillPorts(N)
+	nodes := NewNodes(N)
 	defer StopNodes(nodes)
 	StartNodes(t, nodes)
 	time.Sleep(1 * time.Second)
@@ -46,7 +50,8 @@ func TestLogReplication(t *testing.T) {
 }
 
 func Test100LogReplication(t *testing.T) {
-	nodes := NewNodes(5)
+	KillPorts(N)
+	nodes := NewNodes(N)
 	defer StopNodes(nodes)
 	StartNodes(t, nodes)
 	time.Sleep(1 * time.Second)

@@ -9,9 +9,25 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
+
+func KillPorts(n int) {
+	for i := 0; i < n; i++ {
+		for _, port := range []int{8001 + i, 9001 + i} {
+			out, err := exec.Command("lsof", "-ti", fmt.Sprintf(":%d", port)).Output()
+			if err != nil {
+				continue
+			}
+			pids := strings.Fields(string(out))
+			for _, pid := range pids {
+				_ = exec.Command("kill", "-9", pid).Run()
+			}
+		}
+	}
+}
 
 type Node struct {
 	id      string
