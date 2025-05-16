@@ -140,13 +140,18 @@ func (s *server) RequestVote(ctx context.Context, req *pb.VoteRequest) (*pb.Vote
 }
 
 func (s *server) ForwardToLeader(ctx context.Context, command *pb.Command) (*pb.CommandResponse, error) {
-	if s.node.State != Leader {
+	if s.node.State == Follower {
 		return s.node.Clients[s.node.LeaderId].ForwardToLeader(context.Background(), command)
 	}
 
 	var cmd Command
 	var res pb.CommandResponse
 	res.Success = true
+
+	if s.node.State == Candidate {
+		res.Success = false
+		return &res, nil
+	}
 
 	err := json.Unmarshal(command.Command, &cmd)
 

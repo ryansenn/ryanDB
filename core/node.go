@@ -86,6 +86,10 @@ func (n *Node) HandleCommand(cmd *Command) string {
 		return n.ForwardToLeader(cmd)
 	}
 
+	if n.State == Candidate {
+		return "Error: election"
+	}
+
 	switch cmd.Op {
 	case "get":
 		return n.Get(cmd.Key)
