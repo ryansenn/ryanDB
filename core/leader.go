@@ -103,17 +103,6 @@ func (n *Node) UpdateCommitIndex() {
 	}
 }
 
-func (n *Node) ApplyCommitted() {
-	n.ApplyMu.Lock()
-
-	for i := n.LastApplied.Load() + 1; i <= n.CommitIndex.Load(); i++ {
-		n.ApplyLogEntry(i)
-		n.LastApplied.Store(i)
-	}
-
-	n.ApplyMu.Unlock()
-}
-
 func (n *Node) ApplyLogEntry(index int64) {
 	n.LogMu.Lock()
 	cmd := n.Log[index].Command

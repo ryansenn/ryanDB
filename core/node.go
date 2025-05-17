@@ -132,6 +132,17 @@ func (n *Node) Commit(cmd *Command) {
 	n.CommitCond.L.Unlock()
 }
 
+func (n *Node) ApplyCommitted() {
+	n.ApplyMu.Lock()
+
+	for i := n.LastApplied.Load() + 1; i <= n.CommitIndex.Load(); i++ {
+		n.ApplyLogEntry(i)
+		n.LastApplied.Store(i)
+	}
+
+	n.ApplyMu.Unlock()
+}
+
 // Provide linearizable reads
 func (n *Node) Get(key string) string {
 	readIndex := n.CommitIndex.Load()
@@ -142,10 +153,6 @@ func (n *Node) Get(key string) string {
 	}
 	n.ApplyCond.L.Unlock()
 	return n.Storage.Get(key)
-}
-
-func (n *Node) Execute(cmd *Command) {
-
 }
 
 func (n *Node) GetLogSize() int {

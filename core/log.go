@@ -20,6 +20,11 @@ type LogEntry struct {
 	Command Command
 }
 
+type MetaData struct {
+	Term     int64
+	VotedFor string
+}
+
 func NewCommand(op string, key string, value string) *Command {
 	return &Command{Op: op, Key: key, Value: value}
 }
@@ -29,27 +34,110 @@ func NewLogEntry(term int64, command *Command) *LogEntry {
 }
 
 type Logger struct {
-	file   *os.File
-	offset []int64
+	logFile  *os.File
+	metaFile *os.File
+	offset   []int64
 }
 
 func newLogger(id string) *Logger {
 	os.MkdirAll("logs", 0755)
 	path := "logs/" + id + ".log"
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
+	logs, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Temporary clear file
-	err = f.Truncate(0)
+	path = "logs/" + id + ".meta"
+	meta, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
+
 	if err != nil {
 		log.Fatal(err)
 	}
-	f.Seek(0, io.SeekStart)
 
-	return &Logger{file: f}
+	return &Logger{logFile: logs, metaFile: meta}
+}
+
+func (l *Logger) ClearData() {
+	err := l.logFile.Truncate(0)
+	if err != nil {
+		log.Fatal(err)
+	}
+	l.logFile.Seek(0, io.SeekStart)
+
+	err = l.metaFile.Truncate(0)
+	if err != nil {
+		log.Fatal(err)
+	}
+	l.metaFile.Seek(0, io.SeekStart)
+}
+
+/*
+func (l *Logger) RecoverData() (int, string) {
+
+}
+*/
+
+func (l *Logger) WriteTerm(term int64) {
+	var metaData MetaData
+	decoder := json.NewDecoder(l.metaFile)
+	err := decoder.Decode(&metaData)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	metaData.Term = term
+
+	l.metaFile.Truncate(0)
+	l.metaFile.Seek(0, io.SeekStart)
+	json.NewEncoder(l.metaFile).Encode(metaData)
+}
+
+func (l *Logger) WriteVotedFor(votedFor string) {
+	var metaData MetaData
+	decoder := json.NewDecoder(l.metaFile)
+	err := decoder.Decode(&metaData)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	metaData.VotedFor = votedFor
+
+	l.metaFile.Truncate(0)
+	l.metaFile.Seek(0, io.SeekStart)
+	json.NewEncoder(l.metaFile).Encode(metaData)
+}
+
+func (l *Logger) AppendLog(entry *LogEntry) {
+	data := encodeLogEntry(entry)
+
+	pos, err := l.logFile.Seek(0, io.SeekEnd)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if _, err := l.logFile.Write(data); err != nil {
+		log.Fatal(err)
+	}
+
+	l.offset = append(l.offset, pos)
+	l.logFile.Sync()
+}
+
+func (l *Logger) AppendLogs(entries []*LogEntry, start int64) {
+	if start < int64(len(l.offset)) {
+		err := l.logFile.Truncate(l.offset[start])
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	for _, entry := range entries {
+		l.AppendLog(entry)
+	}
 }
 
 func encodeLogEntry(entry *LogEntry) []byte {
@@ -68,33 +156,4 @@ func encodeLogEntry(entry *LogEntry) []byte {
 	final := buf.Bytes()
 
 	return final
-}
-
-func (l *Logger) AppendLog(entry *LogEntry) {
-	data := encodeLogEntry(entry)
-
-	pos, err := l.file.Seek(0, io.SeekEnd)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if _, err := l.file.Write(data); err != nil {
-		log.Fatal(err)
-	}
-
-	l.offset = append(l.offset, pos)
-}
-
-func (l *Logger) AppendLogs(entries []*LogEntry, start int64) {
-	if start < int64(len(l.offset)) {
-		err := l.file.Truncate(l.offset[start])
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	for _, entry := range entries {
-		l.AppendLog(entry)
-	}
 }
