@@ -115,12 +115,12 @@ func (s *server) RequestVote(ctx context.Context, req *pb.VoteRequest) (*pb.Vote
 		s.node.ReceiveHeartbeat()
 		s.node.State = Follower
 		s.node.Term.Store(req.Term)
-		s.node.VoteFor = ""
+		s.node.VoteFor.Store(nil)
 	}
 
 	resp := pb.VoteResponse{Term: s.node.Term.Load(), VoteGranted: false}
 
-	if s.node.VoteFor != "" && s.node.VoteFor != req.CandidateId {
+	if s.node.VoteFor.Load() == nil && *s.node.VoteFor.Load() != req.CandidateId {
 		return &resp, nil
 	}
 
@@ -133,7 +133,7 @@ func (s *server) RequestVote(ctx context.Context, req *pb.VoteRequest) (*pb.Vote
 	}
 
 	resp.VoteGranted = true
-	s.node.VoteFor = req.CandidateId
+	s.node.VoteFor.Store(&req.CandidateId)
 	s.node.ReceiveHeartbeat()
 	log.Printf("%s has granted vote to %s in term %d", s.node.Id, req.CandidateId, s.node.Term.Load())
 	return &resp, nil

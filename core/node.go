@@ -28,7 +28,7 @@ type Node struct {
 	State   NodeState
 
 	Term        atomic.Int64
-	VoteFor     string
+	VoteFor     atomic.Pointer[string]
 	CommitIndex atomic.Int64
 	LastApplied atomic.Int64
 	ApplyMu     sync.Mutex
@@ -52,7 +52,6 @@ func NewNode(id, port string, peers map[string]string) *Node {
 		Peers:              peers,
 		Clients:            make(map[string]pb.NodeClient),
 		State:              Follower,
-		VoteFor:            "",
 		NextIndex:          make(map[string]*atomic.Int64),
 		MatchIndex:         make(map[string]*atomic.Int64),
 		Log:                make([]*LogEntry, 0),
@@ -104,11 +103,11 @@ func (n *Node) HandleCommand(cmd *Command) string {
 // Used by followers to update/write entries from leader
 func (n *Node) AppendLogs(PrevLogIndex int64, entries []*LogEntry) {
 	n.LogMu.Lock()
+	defer n.LogMu.Unlock()
 
 	// in memory
 	n.Log = n.Log[:PrevLogIndex+1]
 	n.Log = append(n.Log, entries...)
-	n.LogMu.Unlock()
 
 	//persistent
 	n.Logger.AppendLogs(entries, PrevLogIndex+1)
@@ -198,8 +197,10 @@ func (n *Node) StartElectionTimer() {
 }
 
 func (n *Node) StartElection() {
-	n.VoteFor = n.Id
+	n.VoteFor.Store(&n.Id)
 	n.Term.Add(1)
+	n.Logger.WriteTerm(n.Term.Load())
+	n.Logger.WriteVotedFor(*n.VoteFor.Load())
 	n.State = Candidate
 	yesVote := 1
 
