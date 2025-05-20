@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"sync"
 )
 
 type Command struct {
@@ -37,6 +38,7 @@ type Logger struct {
 	logFile  *os.File
 	metaFile *os.File
 	offset   []int64
+	metaMu   sync.Mutex
 }
 
 func newLogger(id string) *Logger {
@@ -65,6 +67,9 @@ func (l *Logger) ClearData() {
 	}
 	l.logFile.Seek(0, io.SeekStart)
 
+	l.metaMu.Lock()
+	defer l.metaMu.Unlock()
+
 	err = l.metaFile.Truncate(0)
 	if err != nil {
 		log.Fatal(err)
@@ -79,6 +84,9 @@ func (l *Logger) RecoverData() (int, string) {
 */
 
 func (l *Logger) WriteTerm(term int64) {
+	l.metaMu.Lock()
+	defer l.metaMu.Unlock()
+
 	var metaData MetaData
 	decoder := json.NewDecoder(l.metaFile)
 	err := decoder.Decode(&metaData)
@@ -95,6 +103,9 @@ func (l *Logger) WriteTerm(term int64) {
 }
 
 func (l *Logger) WriteVotedFor(votedFor string) {
+	l.metaMu.Lock()
+	defer l.metaMu.Unlock()
+
 	var metaData MetaData
 	decoder := json.NewDecoder(l.metaFile)
 	err := decoder.Decode(&metaData)

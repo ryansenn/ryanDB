@@ -76,6 +76,7 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendRequest) (*pb.
 
 	if req.Term > term {
 		s.node.Term.Store(req.Term)
+		s.node.Logger.WriteTerm(s.node.Term.Load())
 		s.node.State = Follower
 	}
 
@@ -116,11 +117,13 @@ func (s *server) RequestVote(ctx context.Context, req *pb.VoteRequest) (*pb.Vote
 		s.node.State = Follower
 		s.node.Term.Store(req.Term)
 		s.node.VoteFor.Store(nil)
+		s.node.Logger.WriteTerm(s.node.Term.Load())
+		s.node.Logger.WriteVotedFor(*s.node.VoteFor.Load())
 	}
 
 	resp := pb.VoteResponse{Term: s.node.Term.Load(), VoteGranted: false}
 
-	if s.node.VoteFor.Load() == nil && *s.node.VoteFor.Load() != req.CandidateId {
+	if s.node.VoteFor.Load() != nil && *s.node.VoteFor.Load() != req.CandidateId {
 		return &resp, nil
 	}
 
