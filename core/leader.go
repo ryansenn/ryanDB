@@ -9,6 +9,27 @@ import (
 	pb "github.com/ryansenn/ryanDB/proto/nodepb"
 )
 
+// Used by leader to append a command from client
+func (n *Node) AppendLog(cmd *Command) int {
+	entry := NewLogEntry(n.Term.Load(), cmd)
+	n.LogMu.Lock()
+	defer n.LogMu.Unlock()
+	n.Logger.AppendLog(entry)
+	n.Log = append(n.Log, entry)
+	log.Printf(n.Id + " has appended 1 new log")
+	return len(n.Log) - 1
+}
+
+// Used by leader to append a command and block until committed
+func (n *Node) Commit(cmd *Command) {
+	index := int64(n.AppendLog(cmd))
+	n.CommitCond.L.Lock()
+	for index > n.CommitIndex.Load() {
+		n.CommitCond.Wait()
+	}
+	n.CommitCond.L.Unlock()
+}
+
 func (n *Node) StartReplicationWorkers() {
 	for key, _ := range n.MatchIndex {
 		n.MatchIndex[key].Store(0)

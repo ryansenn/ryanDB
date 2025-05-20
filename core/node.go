@@ -101,35 +101,19 @@ func (n *Node) HandleCommand(cmd *Command) string {
 	return "unknown command"
 }
 
-func (n *Node) AppendLog(cmd *Command) int {
-	entry := NewLogEntry(n.Term.Load(), cmd)
-	n.LogMu.Lock()
-	defer n.LogMu.Unlock()
-	n.Logger.AppendLog(entry)
-	n.Log = append(n.Log, entry)
-	log.Printf(n.Id + " has appended 1 new log")
-	return len(n.Log) - 1
-}
-
+// Used by followers to update/write entries from leader
 func (n *Node) AppendLogs(PrevLogIndex int64, entries []*LogEntry) {
 	n.LogMu.Lock()
+
 	// in memory
 	n.Log = n.Log[:PrevLogIndex+1]
 	n.Log = append(n.Log, entries...)
+	n.LogMu.Unlock()
 
 	//persistent
 	n.Logger.AppendLogs(entries, PrevLogIndex+1)
-	n.LogMu.Unlock()
-	log.Printf(n.Id+" has appended %d new log", len(entries))
-}
 
-func (n *Node) Commit(cmd *Command) {
-	index := int64(n.AppendLog(cmd))
-	n.CommitCond.L.Lock()
-	for index > n.CommitIndex.Load() {
-		n.CommitCond.Wait()
-	}
-	n.CommitCond.L.Unlock()
+	log.Printf(n.Id+" has appended %d new log", len(entries))
 }
 
 func (n *Node) ApplyCommitted() {
