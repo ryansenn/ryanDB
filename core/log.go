@@ -188,3 +188,29 @@ func (l *Logger) LoadMeta() (int64, string) {
 
 	return metaData.Term, metaData.VotedFor
 }
+
+func (l *Logger) BuildOffsetTable() {
+	l.logFile.Seek(0, io.SeekStart)
+
+	i := 0
+	offset := int64(0)
+	var buf [4]byte
+	n, err := l.logFile.Read(buf[:])
+
+	if n != 4 {
+		return
+	}
+
+	for err == nil {
+		l.offset[i] = offset
+		i += 1
+		offset += int64(binary.LittleEndian.Uint32(buf[:]))
+		_, err = l.logFile.Read(buf[:])
+	}
+
+	l.offset[i] = offset
+}
+
+func (l *Logger) LoadLogs() []*LogEntry {
+
+}
