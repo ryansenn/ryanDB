@@ -50,6 +50,7 @@ func main() {
 	id := flag.String("id", "", "Unique node ID")
 	port := flag.String("port", "8000", "Port to listen on")
 	peersStr := flag.String("peers", "", "Comma-separated list of id=addr pairs (e.g., node1=localhost:8001,node2=localhost:8002,node3=localhost:8003)")
+	reset := flag.Bool("reset", false, "Reset logs and metadata")
 
 	flag.Parse()
 
@@ -59,6 +60,11 @@ func main() {
 	}
 
 	node = core.NewNode(*id, *port, parsePeers(*peersStr))
+
+	if *reset {
+		node.Logger.ClearData()
+	}
+
 	go node.Init()
 
 	http.HandleFunc("/get", get)

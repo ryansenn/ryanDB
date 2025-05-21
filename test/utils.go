@@ -135,7 +135,7 @@ func NewNodes(n int) []*Node {
 }
 
 func (n *Node) StartNode(t *testing.T) {
-	cmd := exec.Command("../raftnode", "--id="+n.id, "--port="+n.port, "--peers="+n.peers)
+	cmd := exec.Command("../ryanDB", "--id="+n.id, "--port="+n.port, "--peers="+n.peers)
 	//stdout, _ := cmd.StdoutPipe()
 	//stderr, _ := cmd.StderrPipe()
 	cmd.Stdout = os.Stdout

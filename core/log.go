@@ -44,7 +44,7 @@ type Logger struct {
 
 func newLogger(id string) *Logger {
 	os.MkdirAll("logs", 0755)
-	path := "logs/" + id + ".log"
+	path := "logs/" + id + ".rlog"
 	logs, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
 
 	if err != nil {
