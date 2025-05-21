@@ -64,6 +64,8 @@ func NewNode(id, port string, peers map[string]string) *Node {
 	}
 	n.CommitIndex.Store(-1)
 	n.LastApplied.Store(-1)
+	empty := ""
+	n.VoteFor.Store(&empty)
 
 	for key, _ := range n.Peers {
 		n.NextIndex[key] = &atomic.Int64{}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"runtime/debug"
 	"strings"
 
 	"github.com/ryansenn/ryanDB/core"
@@ -39,6 +40,13 @@ func status(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("panic: %v", r)
+			debug.PrintStack()
+		}
+	}()
+
 	id := flag.String("id", "", "Unique node ID")
 	port := flag.String("port", "8000", "Port to listen on")
 	peersStr := flag.String("peers", "", "Comma-separated list of id=addr pairs (e.g., node1=localhost:8001,node2=localhost:8002,node3=localhost:8003)")

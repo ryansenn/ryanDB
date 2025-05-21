@@ -122,14 +122,15 @@ func (s *server) RequestVote(ctx context.Context, req *pb.VoteRequest) (*pb.Vote
 		s.node.ReceiveHeartbeat()
 		s.node.State = Follower
 		s.node.Term.Store(req.Term)
-		s.node.VoteFor.Store(nil)
+		empty := ""
+		s.node.VoteFor.Store(&empty)
 		s.node.Logger.WriteTerm(s.node.Term.Load())
 		s.node.Logger.WriteVotedFor(*s.node.VoteFor.Load())
 	}
 
 	resp := pb.VoteResponse{Term: s.node.Term.Load(), VoteGranted: false}
 
-	if s.node.VoteFor.Load() != nil && *s.node.VoteFor.Load() != req.CandidateId {
+	if *s.node.VoteFor.Load() != "" && *s.node.VoteFor.Load() != req.CandidateId {
 		return &resp, nil
 	}
 
