@@ -78,12 +78,6 @@ func (l *Logger) ClearData() {
 	l.metaFile.Seek(0, io.SeekStart)
 }
 
-/*
-func (l *Logger) RecoverData() (int, string) {
-
-}
-*/
-
 func (l *Logger) WriteTerm(term int64) {
 	l.metaMu.Lock()
 	defer l.metaMu.Unlock()
@@ -175,4 +169,22 @@ func encodeLogEntry(entry *LogEntry) []byte {
 	final := buf.Bytes()
 
 	return final
+}
+
+func (l *Logger) LoadMeta() (int64, string) {
+	l.metaMu.Lock()
+	defer l.metaMu.Unlock()
+
+	var metaData MetaData
+	decoder := json.NewDecoder(l.metaFile)
+	err := decoder.Decode(&metaData)
+
+	if err != nil {
+		if err != io.EOF {
+			log.Fatalf("%s %s", l.Id, err)
+		}
+		metaData = MetaData{}
+	}
+
+	return metaData.Term, metaData.VotedFor
 }
