@@ -35,6 +35,7 @@ func NewLogEntry(term int64, command *Command) *LogEntry {
 }
 
 type Logger struct {
+	Id       string
 	logFile  *os.File
 	metaFile *os.File
 	offset   []int64
@@ -47,7 +48,7 @@ func newLogger(id string) *Logger {
 	logs, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("wow1 %s %s", id, err)
 	}
 
 	path = "logs/" + id + ".meta"
@@ -57,7 +58,7 @@ func newLogger(id string) *Logger {
 		log.Fatal(err)
 	}
 
-	return &Logger{logFile: logs, metaFile: meta}
+	return &Logger{Id: id, logFile: logs, metaFile: meta}
 }
 
 func (l *Logger) ClearData() {
@@ -72,7 +73,7 @@ func (l *Logger) ClearData() {
 
 	err = l.metaFile.Truncate(0)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("%s %s", l.Id, err)
 	}
 	l.metaFile.Seek(0, io.SeekStart)
 }
@@ -92,7 +93,10 @@ func (l *Logger) WriteTerm(term int64) {
 	err := decoder.Decode(&metaData)
 
 	if err != nil {
-		log.Fatal(err)
+		if err != io.EOF {
+			log.Fatalf("%s %s", l.Id, err)
+		}
+		metaData = MetaData{}
 	}
 
 	metaData.Term = term
@@ -105,13 +109,17 @@ func (l *Logger) WriteTerm(term int64) {
 func (l *Logger) WriteVotedFor(votedFor string) {
 	l.metaMu.Lock()
 	defer l.metaMu.Unlock()
+	l.metaFile.Seek(0, io.SeekStart)
 
 	var metaData MetaData
 	decoder := json.NewDecoder(l.metaFile)
 	err := decoder.Decode(&metaData)
 
 	if err != nil {
-		log.Fatal(err)
+		if err != io.EOF {
+			log.Fatalf("%s %s", l.Id, err)
+		}
+		metaData = MetaData{}
 	}
 
 	metaData.VotedFor = votedFor
@@ -127,11 +135,11 @@ func (l *Logger) AppendLog(entry *LogEntry) {
 	pos, err := l.logFile.Seek(0, io.SeekEnd)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("%s %s", l.Id, err)
 	}
 
 	if _, err := l.logFile.Write(data); err != nil {
-		log.Fatal(err)
+		log.Fatalf("%s %s", l.Id, err)
 	}
 
 	l.offset = append(l.offset, pos)
@@ -142,7 +150,7 @@ func (l *Logger) AppendLogs(entries []*LogEntry, start int64) {
 	if start < int64(len(l.offset)) {
 		err := l.logFile.Truncate(l.offset[start])
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("%s %s", l.Id, err)
 		}
 	}
 

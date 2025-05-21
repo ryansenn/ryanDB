@@ -58,7 +58,7 @@ func main() {
 	http.HandleFunc("/status", status)
 
 	//log.Printf("Server ID: %s | Listening on: %s | Peers: %s", *id, *port, *peersStr)
-	log.Fatal(http.ListenAndServe(":"+*port, nil))
+	log.Fatal(*id+" %s", http.ListenAndServe(":"+*port, nil))
 }
 
 func parsePeers(peersStr string) map[string]string {

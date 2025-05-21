@@ -21,7 +21,7 @@ func (n *Node) StartServer() {
 	lis, err := net.Listen("tcp", n.Peers[n.Id])
 
 	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
+		log.Fatalf(n.Id+"failed to listen: %v", err)
 	}
 
 	grpcServer := grpc.NewServer()
@@ -33,13 +33,17 @@ func (n *Node) StartClients() {
 	n.Clients = map[string]pb.NodeClient{}
 
 	for key, addr := range n.Peers {
+		if key == n.Id {
+			continue
+		}
+
 		conn, err := grpc.NewClient(
 			addr,
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
 		)
 
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal(n.Id+" %s", err)
 		}
 
 		client := pb.NewNodeClient(conn)
@@ -59,6 +63,8 @@ func (n *Node) StartClients() {
 			if err == nil {
 				break
 			}
+
+			time.Sleep(200 * time.Millisecond)
 		}
 	}
 }
@@ -137,6 +143,7 @@ func (s *server) RequestVote(ctx context.Context, req *pb.VoteRequest) (*pb.Vote
 
 	resp.VoteGranted = true
 	s.node.VoteFor.Store(&req.CandidateId)
+	s.node.Logger.WriteVotedFor(req.CandidateId)
 	s.node.ReceiveHeartbeat()
 	log.Printf("%s has granted vote to %s in term %d", s.node.Id, req.CandidateId, s.node.Term.Load())
 	return &resp, nil
