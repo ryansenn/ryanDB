@@ -134,8 +134,8 @@ func NewNodes(n int) []*Node {
 	return nodes
 }
 
-func (n *Node) StartNode(t *testing.T) {
-	cmd := exec.Command("../ryanDB", "--id="+n.id, "--port="+n.port, "--peers="+n.peers)
+func (n *Node) StartNode(t *testing.T, reset string) {
+	cmd := exec.Command("../ryanDB", "--id="+n.id, "--port="+n.port, "--peers="+n.peers, "--reset="+reset)
 	//stdout, _ := cmd.StdoutPipe()
 	//stderr, _ := cmd.StderrPipe()
 	cmd.Stdout = os.Stdout
@@ -158,9 +158,9 @@ func (n *Node) StopNode() {
 	}
 }
 
-func StartNodes(t *testing.T, nodes []*Node) {
+func StartNodes(t *testing.T, nodes []*Node, reset string) {
 	for _, node := range nodes {
-		node.StartNode(t)
+		node.StartNode(t, reset)
 	}
 	time.Sleep(10 * time.Second)
 }

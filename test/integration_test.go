@@ -13,7 +13,7 @@ func TestElection(t *testing.T) {
 	KillPorts(N)
 	nodes := NewNodes(N)
 	defer StopNodes(nodes)
-	StartNodes(t, nodes)
+	StartNodes(t, nodes, "true")
 	time.Sleep(1 * time.Second)
 
 	leader, leaderCount := CountLeader(t, nodes)
@@ -35,7 +35,7 @@ func TestLogReplication(t *testing.T) {
 	KillPorts(N)
 	nodes := NewNodes(N)
 	defer StopNodes(nodes)
-	StartNodes(t, nodes)
+	StartNodes(t, nodes, "true")
 	time.Sleep(1 * time.Second)
 
 	nodes[1].Put(t, "key1", "value1")
@@ -53,7 +53,7 @@ func Test100LogReplication(t *testing.T) {
 	KillPorts(N)
 	nodes := NewNodes(N)
 	defer StopNodes(nodes)
-	StartNodes(t, nodes)
+	StartNodes(t, nodes, "true")
 	time.Sleep(1 * time.Second)
 
 	for i := 1; i < 100; i++ {
