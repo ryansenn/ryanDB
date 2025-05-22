@@ -9,12 +9,18 @@ import (
 
 var N = 5
 
-func TestElection(t *testing.T) {
+func InitNodes(t *testing.T) []*Node {
 	KillPorts(N)
 	nodes := NewNodes(N)
-	defer StopNodes(nodes)
 	StartNodes(t, nodes, "true")
 	time.Sleep(1 * time.Second)
+
+	return nodes
+}
+
+func TestElection(t *testing.T) {
+	nodes := InitNodes(t)
+	defer StopNodes(nodes)
 
 	leader, leaderCount := CountLeader(t, nodes)
 	if leaderCount != 1 {
@@ -32,11 +38,8 @@ func TestElection(t *testing.T) {
 }
 
 func TestLogReplication(t *testing.T) {
-	KillPorts(N)
-	nodes := NewNodes(N)
+	nodes := InitNodes(t)
 	defer StopNodes(nodes)
-	StartNodes(t, nodes, "true")
-	time.Sleep(1 * time.Second)
 
 	nodes[1].Put(t, "key1", "value1")
 
@@ -50,11 +53,8 @@ func TestLogReplication(t *testing.T) {
 }
 
 func Test100LogReplication(t *testing.T) {
-	KillPorts(N)
-	nodes := NewNodes(N)
+	nodes := InitNodes(t)
 	defer StopNodes(nodes)
-	StartNodes(t, nodes, "true")
-	time.Sleep(1 * time.Second)
 
 	for i := 1; i < 100; i++ {
 		key := fmt.Sprintf("key%d", i)
@@ -76,3 +76,35 @@ func Test100LogReplication(t *testing.T) {
 
 	}
 }
+
+func TestLogDiskRecovery(t *testing.T) {
+	nodes := InitNodes(t)
+	defer StopNodes(nodes)
+
+	for i := 1; i < 10; i++ {
+		key := fmt.Sprintf("key%d", i)
+		value := fmt.Sprintf("value%d", i)
+		nodes[rand.Intn(len(nodes))].Put(t, key, value)
+	}
+
+	time.Sleep(1 * time.Second)
+
+	for _, node := range nodes {
+		node.StopNode()
+		time.Sleep(200 * time.Millisecond)
+		node.StartNode(t, "false")
+		time.Sleep(200 * time.Millisecond)
+
+		for i := 1; i < 10; i++ {
+			key := fmt.Sprintf("key%d", i)
+			expectedValue := fmt.Sprintf("value%d", i)
+			value := node.Get(t, key)
+
+			if value != expectedValue {
+				t.Fatalf("%s has wrong value: %s", node.id, value)
+			}
+		}
+	}
+}
+
+// test missed logs

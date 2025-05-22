@@ -87,8 +87,6 @@ func (n *Node) RecoverState() {
 	n.Log = n.Logger.LoadLogs()
 	n.LogMu.Unlock()
 
-	log.Printf(n.Id)
-
 	term, votedFor := n.Logger.LoadMeta()
 	n.Term.Store(term)
 	n.VoteFor.Store(&votedFor)
