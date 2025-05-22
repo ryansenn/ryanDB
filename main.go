@@ -63,6 +63,8 @@ func main() {
 
 	if *reset {
 		node.Logger.ClearData()
+	} else {
+		node.RecoverState()
 	}
 
 	go node.Init()

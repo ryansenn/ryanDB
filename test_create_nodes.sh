@@ -1,6 +1,6 @@
 #!/bin/bash
 
-RESET_FLAG=$1
+RESET_FLAG=${1:-true}
 
 PEERS="node1=127.0.0.1:9001,node2=127.0.0.1:9002,node3=127.0.0.1:9003"
 

@@ -201,9 +201,9 @@ func (l *Logger) LoadMeta() (int64, string) {
 }
 
 func (l *Logger) BuildOffsetTable() {
+	l.offset = nil
 	l.logFile.Seek(0, io.SeekStart)
 
-	i := 0
 	offset := int64(0)
 	var buf [4]byte
 	n, err := l.logFile.Read(buf[:])
@@ -213,13 +213,22 @@ func (l *Logger) BuildOffsetTable() {
 	}
 
 	for err == nil {
-		l.offset[i] = offset
-		i += 1
-		offset += int64(binary.LittleEndian.Uint32(buf[:])) + 4
-		_, err = l.logFile.Read(buf[:])
+		l.offset = append(l.offset, offset)
+		size := int64(binary.LittleEndian.Uint32(buf[:]))
+		offset, err = l.logFile.Seek(size, io.SeekCurrent)
+
+		if err != nil {
+			log.Fatalf("%s %s", l.Id, err)
+		}
+
+		n, err = l.logFile.Read(buf[:])
+
+		if n != 4 {
+			return
+		}
 	}
 
-	l.offset[i] = offset
+	l.offset = append(l.offset, offset)
 }
 
 func (l *Logger) LoadLogs() []*LogEntry {
