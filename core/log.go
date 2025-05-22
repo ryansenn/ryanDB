@@ -171,6 +171,17 @@ func encodeLogEntry(entry *LogEntry) []byte {
 	return final
 }
 
+func decodeLogEntry(buf []byte) *LogEntry {
+	buf = buf[:len(buf)-1]
+	var entry LogEntry
+	err := json.Unmarshal(buf, &entry)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return &entry
+}
+
 func (l *Logger) LoadMeta() (int64, string) {
 	l.metaMu.Lock()
 	defer l.metaMu.Unlock()
@@ -204,13 +215,9 @@ func (l *Logger) BuildOffsetTable() {
 	for err == nil {
 		l.offset[i] = offset
 		i += 1
-		offset += int64(binary.LittleEndian.Uint32(buf[:]))
+		offset += int64(binary.LittleEndian.Uint32(buf[:])) + 4
 		_, err = l.logFile.Read(buf[:])
 	}
 
 	l.offset[i] = offset
-}
-
-func (l *Logger) LoadLogs() []*LogEntry {
-
 }
