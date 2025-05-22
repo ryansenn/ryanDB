@@ -221,3 +221,31 @@ func (l *Logger) BuildOffsetTable() {
 
 	l.offset[i] = offset
 }
+
+func (l *Logger) LoadLogs() []*LogEntry {
+	l.BuildOffsetTable()
+
+	var entries []*LogEntry
+
+	for _, offset := range l.offset {
+		l.logFile.Seek(offset, io.SeekStart)
+
+		var buf [4]byte
+		_, err := l.logFile.Read(buf[:])
+		if err != nil {
+			log.Fatalf("%s %s", l.Id, err)
+		}
+
+		size := int(binary.LittleEndian.Uint32(buf[:]))
+		logBuf := make([]byte, size)
+		_, err = l.logFile.Read(logBuf)
+		if err != nil {
+			log.Fatalf("%s %s", l.Id, err)
+		}
+
+		entry := decodeLogEntry(logBuf)
+		entries = append(entries, entry)
+	}
+
+	return entries
+}
