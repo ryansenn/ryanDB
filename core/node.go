@@ -82,6 +82,16 @@ func (n *Node) Init() {
 	n.StartElectionTimer()
 }
 
+func (n *Node) RecoverState() {
+	n.LogMu.Lock()
+	n.Log = n.Logger.LoadLogs()
+	n.LogMu.Unlock()
+
+	term, votedFor := n.Logger.LoadMeta()
+	n.Term.Store(term)
+	n.VoteFor.Store(&votedFor)
+}
+
 func (n *Node) HandleCommand(cmd *Command) string {
 	if n.State == Follower {
 		return n.ForwardToLeader(cmd)
