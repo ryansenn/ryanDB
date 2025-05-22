@@ -87,13 +87,13 @@ func TestLogDiskRecovery(t *testing.T) {
 		nodes[rand.Intn(len(nodes))].Put(t, key, value)
 	}
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	for _, node := range nodes {
 		node.StopNode()
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(1 * time.Second)
 		node.StartNode(t, "false")
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(5 * time.Second)
 
 		for i := 1; i < 10; i++ {
 			key := fmt.Sprintf("key%d", i)
