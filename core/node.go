@@ -79,9 +79,7 @@ func (n *Node) Init() {
 	log.Printf(n.Id + " has been initialized.")
 	n.StartServer()
 	n.StartClients()
-	if n.Id != "node2" {
-		n.StartElectionTimer()
-	}
+	n.StartElectionTimer()
 }
 
 func (n *Node) RecoverState() {

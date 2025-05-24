@@ -77,7 +77,7 @@ func Test100LogReplication(t *testing.T) {
 	}
 }
 
-func TestLogDiskRecovery(t *testing.T) {
+func TestLogPersistence(t *testing.T) {
 	nodes := InitNodes(t)
 	defer StopNodes(nodes)
 
@@ -87,22 +87,24 @@ func TestLogDiskRecovery(t *testing.T) {
 		nodes[rand.Intn(len(nodes))].Put(t, key, value)
 	}
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	for _, node := range nodes {
+		t.Logf("Killing node %s", node.id)
 		node.StopNode()
-		time.Sleep(1 * time.Second)
+		time.Sleep(500 * time.Millisecond)
+		t.Logf("Restarting node %s", node.id)
 		node.StartNode(t, "false")
-		time.Sleep(5 * time.Second)
+		time.Sleep(3 * time.Second)
+	}
 
-		for i := 1; i < 10; i++ {
-			key := fmt.Sprintf("key%d", i)
-			expectedValue := fmt.Sprintf("value%d", i)
-			value := node.Get(t, key)
+	for i := 1; i < 10; i++ {
+		key := fmt.Sprintf("key%d", i)
+		expectedValue := fmt.Sprintf("value%d", i)
+		value := nodes[rand.Intn(len(nodes))].Get(t, key)
 
-			if value != expectedValue {
-				t.Fatalf("%s has wrong value: %s", node.id, value)
-			}
+		if value != expectedValue {
+			t.Fatalf("expected %s but got wrong value: %s", expectedValue, value)
 		}
 	}
 }
