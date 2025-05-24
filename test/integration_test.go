@@ -109,4 +109,29 @@ func TestLogPersistence(t *testing.T) {
 	}
 }
 
-// test missed logs
+func TestMissedLogsRecovery(t *testing.T) {
+	nodes := InitNodes(t)
+	defer StopNodes(nodes)
+
+	nodes[0].StopNode()
+	time.Sleep(500 * time.Millisecond)
+
+	for i := 1; i < 10; i++ {
+		key := fmt.Sprintf("key%d", i)
+		value := fmt.Sprintf("value%d", i)
+		nodes[rand.Intn(len(nodes))].Put(t, key, value)
+	}
+
+	nodes[0].StartNode(t, "false")
+	time.Sleep(2 * time.Second)
+
+	for i := 1; i < 10; i++ {
+		key := fmt.Sprintf("key%d", i)
+		expectedValue := fmt.Sprintf("value%d", i)
+		value := nodes[0].Get(t, key)
+
+		if value != expectedValue {
+			t.Fatalf("expected %s but got wrong value: %s", expectedValue, value)
+		}
+	}
+}
