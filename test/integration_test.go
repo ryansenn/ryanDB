@@ -135,3 +135,38 @@ func TestMissedLogsRecovery(t *testing.T) {
 		}
 	}
 }
+
+// sustained churn: random stop/start of followers while issuing writes
+func TestFollowerChurnUnderLoad(t *testing.T) {
+	nodes := InitNodes(t)
+	defer StopNodes(nodes)
+	time.Sleep(1 * time.Second)
+
+	leader, _ := CountLeader(t, nodes)
+
+	for i := 0; i < 20; i++ {
+		key := fmt.Sprintf("k%d", i)
+		val := fmt.Sprintf("v%d", i)
+		nodes[rand.Intn(N)].Put(t, key, val)
+		time.Sleep(500 * time.Millisecond)
+
+		f := nodes[rand.Intn(N)]
+		if f != leader {
+			f.StopNode()
+			time.Sleep(300 * time.Millisecond)
+			f.StartNode(t, "false")
+			time.Sleep(300 * time.Millisecond)
+		}
+	}
+
+	// validate data on every node
+	for _, n := range nodes {
+		for i := 0; i < 20; i++ {
+			key := fmt.Sprintf("k%d", i)
+			want := fmt.Sprintf("v%d", i)
+			if got := n.Get(t, key); got != want {
+				t.Fatalf("%s wrong value for %s: got %s", n.id, key, got)
+			}
+		}
+	}
+}
