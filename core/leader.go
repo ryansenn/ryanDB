@@ -80,9 +80,11 @@ func (n *Node) ReplicateToFollower(id string) {
 			LeaderCommit: n.CommitIndex.Load(),
 		}
 
-		resp, _ := n.Clients[id].AppendEntries(context.Background(), &req)
+		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+		resp, err := n.Clients[id].AppendEntries(ctx, &req)
+		cancel()
 
-		if len(entries) > 0 {
+		if err == nil && len(entries) > 0 {
 			if resp.Success {
 				added := int64(len(req.Entries))
 				n.NextIndex[id].Add(added)

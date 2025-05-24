@@ -9,6 +9,7 @@ import (
 
 	pb "github.com/ryansenn/ryanDB/proto/nodepb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
@@ -40,12 +41,18 @@ func (n *Node) StartClients() {
 		conn, err := grpc.NewClient(
 			addr,
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithConnectParams(grpc.ConnectParams{
+				Backoff: backoff.Config{
+					BaseDelay:  100 * time.Millisecond,
+					Multiplier: 1.2,
+					MaxDelay:   240 * time.Millisecond,
+				},
+				MinConnectTimeout: 100 * time.Millisecond,
+			}),
 		)
-
 		if err != nil {
-			log.Fatal(n.Id+" %s", err)
+			log.Fatalf("%s dial: %v", n.Id, err)
 		}
-
 		client := pb.NewNodeClient(conn)
 		n.Clients[key] = client
 

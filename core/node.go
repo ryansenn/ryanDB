@@ -79,7 +79,9 @@ func (n *Node) Init() {
 	log.Printf(n.Id + " has been initialized.")
 	n.StartServer()
 	n.StartClients()
-	n.StartElectionTimer()
+	if n.Id != "node2" {
+		n.StartElectionTimer()
+	}
 }
 
 func (n *Node) RecoverState() {
@@ -187,7 +189,7 @@ func (n *Node) ForwardToLeader(command *Command) string {
 
 func (n *Node) StartElectionTimer() {
 	randTimeout := func() time.Duration {
-		return time.Duration(rand.Intn(151)+150) * time.Millisecond
+		return time.Duration(rand.Intn(151)+300) * time.Millisecond
 	}
 	timer := time.NewTimer(randTimeout())
 
