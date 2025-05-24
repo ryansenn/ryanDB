@@ -35,7 +35,7 @@ func status(w http.ResponseWriter, r *http.Request) {
 		"id":       node.Id,
 		"state":    node.State, // 0-Follower, 1-Candidate, 2-Leader
 		"term":     node.Term.Load(),
-		"leaderId": node.LeaderId,
+		"leaderId": node.LeaderId.Load(),
 	})
 }
 

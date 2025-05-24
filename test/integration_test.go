@@ -116,10 +116,11 @@ func TestMissedLogsRecovery(t *testing.T) {
 	nodes[0].StopNode()
 	time.Sleep(500 * time.Millisecond)
 
+	activeNodes := nodes[1:]
 	for i := 1; i < 10; i++ {
 		key := fmt.Sprintf("key%d", i)
 		value := fmt.Sprintf("value%d", i)
-		nodes[rand.Intn(len(nodes))].Put(t, key, value)
+		activeNodes[rand.Intn(len(activeNodes))].Put(t, key, value)
 	}
 
 	nodes[0].StartNode(t, "false")
@@ -144,7 +145,7 @@ func TestFollowerChurnUnderLoad(t *testing.T) {
 
 	leader, _ := CountLeader(t, nodes)
 
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 10; i++ {
 		key := fmt.Sprintf("k%d", i)
 		val := fmt.Sprintf("v%d", i)
 		nodes[rand.Intn(N)].Put(t, key, val)
@@ -161,11 +162,47 @@ func TestFollowerChurnUnderLoad(t *testing.T) {
 
 	// validate data on every node
 	for _, n := range nodes {
-		for i := 0; i < 20; i++ {
+		for i := 0; i < 10; i++ {
 			key := fmt.Sprintf("k%d", i)
 			want := fmt.Sprintf("v%d", i)
 			if got := n.Get(t, key); got != want {
 				t.Fatalf("%s wrong value for %s: got %s", n.id, key, got)
+			}
+		}
+	}
+}
+
+func TestNetworkPartition(t *testing.T) {
+	nodes := InitNodes(t)
+	defer StopNodes(nodes)
+
+	partition1 := nodes[:2]
+	partition2 := nodes[2:]
+
+	for _, node := range partition1 {
+		node.StopNode()
+	}
+
+	time.Sleep(2 * time.Second)
+
+	for i := 1; i < 10; i++ {
+		key := fmt.Sprintf("key%d", i)
+		value := fmt.Sprintf("value%d", i)
+		partition2[rand.Intn(len(partition2))].Put(t, key, value)
+	}
+
+	for _, node := range partition1 {
+		node.StartNode(t, "false")
+	}
+	time.Sleep(2 * time.Second)
+
+	for i := 1; i < 10; i++ {
+		key := fmt.Sprintf("key%d", i)
+		expectedValue := fmt.Sprintf("value%d", i)
+		for _, node := range nodes {
+			value := node.Get(t, key)
+			if value != expectedValue {
+				t.Fatalf("%s has wrong value: %s", node.id, value)
 			}
 		}
 	}

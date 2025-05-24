@@ -39,7 +39,7 @@ type Node struct {
 	CommitCond  *sync.Cond
 	ApplyCond   *sync.Cond
 
-	LeaderId           string
+	LeaderId           atomic.Pointer[string]
 	ResetElectionTimer chan struct{}
 	Logger             *Logger
 	Storage            *Engine
@@ -57,7 +57,6 @@ func NewNode(id, port string, peers map[string]string) *Node {
 		Log:                make([]*LogEntry, 0),
 		CommitCond:         sync.NewCond(&sync.Mutex{}),
 		ApplyCond:          sync.NewCond(&sync.Mutex{}),
-		LeaderId:           "",
 		ResetElectionTimer: make(chan struct{}, 1),
 		Logger:             newLogger(id),
 		Storage:            NewEngine(),
@@ -66,6 +65,7 @@ func NewNode(id, port string, peers map[string]string) *Node {
 	n.LastApplied.Store(-1)
 	empty := ""
 	n.VoteFor.Store(&empty)
+	n.LeaderId.Store(&empty)
 
 	for key, _ := range n.Peers {
 		n.NextIndex[key] = &atomic.Int64{}
@@ -175,11 +175,16 @@ func (n *Node) ForwardToLeader(command *Command) string {
 		log.Print(err)
 	}
 
-	log.Printf(n.Id + " has forwarded command to leader " + n.LeaderId)
-	response, err := n.Clients[n.LeaderId].ForwardToLeader(context.Background(), &pb.Command{Command: serializedCommand})
+	if *n.LeaderId.Load() == "" {
+		return "no leader elected yet"
+	}
+
+	log.Printf(n.Id + " has forwarded command to leader " + *n.LeaderId.Load())
+	response, err := n.Clients[*n.LeaderId.Load()].ForwardToLeader(context.Background(), &pb.Command{Command: serializedCommand})
 
 	if err != nil {
 		log.Print(err)
+		return "leader not accessible"
 	}
 
 	return string(response.Result)

@@ -85,7 +85,7 @@ func (s *server) AppendEntries(ctx context.Context, req *pb.AppendRequest) (*pb.
 	}
 
 	s.node.ReceiveHeartbeat()
-	s.node.LeaderId = req.LeaderId
+	s.node.LeaderId.Store(&req.LeaderId)
 
 	if req.Term > term {
 		s.node.Term.Store(req.Term)
@@ -159,7 +159,7 @@ func (s *server) RequestVote(ctx context.Context, req *pb.VoteRequest) (*pb.Vote
 
 func (s *server) ForwardToLeader(ctx context.Context, command *pb.Command) (*pb.CommandResponse, error) {
 	if s.node.State == Follower {
-		return s.node.Clients[s.node.LeaderId].ForwardToLeader(context.Background(), command)
+		return s.node.Clients[*s.node.LeaderId.Load()].ForwardToLeader(context.Background(), command)
 	}
 
 	var cmd Command
